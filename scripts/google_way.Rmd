@@ -1,0 +1,52 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+```{r}
+library(googleway);library(tidyverse)
+t <- read_csv("~/Desktop/tiny-forest1.csv")
+
+t |>
+  DT::datatable()
+  dfilter(str_detect(post_code, "CF83"))
+```
+
+```{r}
+
+t |>
+  select(lon, lat) %>%
+  .[2,]
+
+t[1]
+
+p <- google_elevation(t |>
+  select(lon, lat), key = "AIzaSyBhAWbDyKX2chM2Jz0ZV22uT_8qN7YKL3Q", simplify = TRUE)
+
+p$results$elevation
+
+google_streetview(location = c(-1.215472, 51.76914 ), key = "AIzaSyBhAWbDyKX2chM2Jz0ZV22uT_8qN7YKL3Q")
+                  
+res <- google_reverse_geocode(location = c(-1.215472, 51.76914 ),  result_type = c("street_address", "postal_code"), key = "AIzaSyBhAWbDyKX2chM2Jz0ZV22uT_8qN7YKL3Q") 
+
+res$results$address_components
+
+```
+
+```{r}
+map_key <- "AIzaSyBhAWbDyKX2chM2Jz0ZV22uT_8qN7YKL3Q"
+
+t <- mutate(t, info = paste(area, "\n", urls))
+
+google_map(key = map_key, search_box = T, data = t) |>
+  add_traffic() |>
+  add_markers(lat = "lat", 
+             lon = "lon", 
+             info_window = "info")
+
+tram_stops
+```

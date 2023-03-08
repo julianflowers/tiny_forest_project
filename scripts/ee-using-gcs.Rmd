@@ -1,0 +1,454 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+```{r}
+library(rgee);library(tidyverse, quietly = TRUE);library(reticulate);library(raster);library(mapview);library(stars);library(RStoolbox);library(RColorBrewer);library(googleCloudStorageR)
+
+
+
+reticulate::virtualenv_list()
+reticulate::virtualenv_remove("rgee")
+reticulate::virtualenv_create("rgee")
+reticulate::use_virtualenv("rgee")
+reticulate::py_install("geemap", pip = TRUE, envname = "rgee")
+reticulate::py_install("geedim", pip = TRUE, envname = "rgee")
+
+reticulate::use_python('/Users/julianflowers/.virtualenvs/geemap/bin/python')
+
+import("ee")
+geemap <- import("geemap")
+import("geedim")
+
+ee_Initialize(user = "julian.flowers12@gmail.com", drive = T, gcs =T)
+
+library(rgeeExtra)
+ee_Initialize("julianflowers12", drive = TRUE, gcs = TRUE)
+SAK <- "~/Downloads/eemapping-7cdee64d8d3e.json"
+ee_utils_sak_copy(sakfile = SAK)
+ee_utils_sak_validate()
+img <- ee$Image$Dataset$CGIAR_SRTM90_V4
+
+EE_geom <- ee$Geometry$Point(c(-1.215472, 51.769139))$buffer(2000)
+start <- "2019-01-01"
+end <- "2023-01-01"
+ccover <- 35
+
+
+sr <- ee$ImageCollection("COPERNICUS/S2_HARMONIZED")
+
+s2 <- sr$filterBounds(EE_geom)
+s2 <- s2$filterDate(start, end)
+s2 <- s2$filter(ee$Filter$lt('CLOUDY_PIXEL_PERCENTAGE', ccover))
+
+geemap$download_ee_image_collection(s2,  out_dir = "/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive", region = EE_geom, crs = "EPSG:4326", scale = 10, num_threads = 6)
+  ```
+
+```{r}
+# Define an study area
+EE_geom <- ee$Geometry$Point(c(-1.215472, 51.769139))$buffer(2000)
+```
+
+```{r}
+l8img <- ee$ImageCollection$Dataset$LANDSAT_LC08_C02_T2_L2 %>% 
+  ee$ImageCollection$filterDate('2021-06-01', '2021-12-01') %>% 
+  ee$ImageCollection$filterBounds(EE_geom) %>% 
+  ee$ImageCollection$first()
+
+cat("IM", unlist(l8img$getInfo())) |>
+  enframe()
+```
+
+```{r add-images-to-gcs-bucket}
+gcs_l8_name  <- "l8demo2" # name of the image in GCS.
+BUCKET_NAME <- "jf_ee_projects" # set here your bucket name
+task <- ee_image_to_gcs(
+  image = l8img$select(sprintf("SR_B%s",1:5)),
+  region = EE_geom,
+  fileNamePrefix = gcs_l8_name,
+  timePrefix = FALSE,
+  bucket = BUCKET_NAME,
+  scale = 10,
+  formatOptions = list(cloudOptimized = TRUE) # Return a COG rather than a TIFF file.
+)
+task$start()
+ee_monitoring()
+```
+
+```{r}
+# Make PUBLIC the GCS object 
+googleCloudStorageR::gcs_update_object_acl(
+  object_name = paste0(gcs_l8_name, ".tif"),
+  bucket = BUCKET_NAME,
+  entity_type = "allUsers"
+)
+```
+
+```{r}
+img_id <- sprintf("https://storage.googleapis.com/%s/%s.tif", BUCKET_NAME, gcs_l8_name)
+visParams <- list(bands=c("B4","B3","SR_B2"), min = 8000, max = 20000, nodata = 0, palette = c("red", "green", "yellow"))
+Map$centerObject(img_id)
+Map$addLayer(
+  eeObject = img_id, 
+  visParams = visParams,
+  name = "My_first_COG",
+  titiler_server = "https://api.cogeo.xyz/"
+)
+```
+
+```{r}
+## Load the SRTM image.
+srtm <- ee$Image("CGIAR/SRTM90_V4")
+
+## Apply an algorithm to an image.
+slope <- ee$Terrain$slope(srtm)
+
+## Display the result.
+Map$setCenter(-112.8598, 36.2841, 9) ## Center on the Grand Canyon.
+Map$addLayer(
+  slope,
+  list(min = 0, max = 60),
+  "slope"
+)
+
+## Get the aspect (in degrees).
+aspect <- ee$Terrain$aspect(srtm)
+
+## Convert to radians, compute the sin of the aspect.
+sinImage <- aspect$divide(180)$multiply(pi)$sin()
+
+## Display the result.
+Map$addLayer(
+  sinImage,
+  list(min = -1, max = 1),
+  "sin"
+)
+```
+
+```{r}
+polygon <- ee$Geometry$Polygon(
+  list(
+    c(-1.2, 51.280649018952),
+    c(3.807648573314655, 50.42759747456426),
+    c(5.653351698314655, 50.42759747456426),
+    c(5.653351698314655, 51.280649018952)
+  ), NULL, FALSE
+)
+
+## Compute the mean elevation in the polygon.
+meanDict <- srtm$reduceRegion(
+  reducer = ee$Reducer$mean(),
+  geometry = polygon,
+  scale = 90
+)
+
+## Get the mean from the dictionary and print it.
+mean <- meanDict$get("elevation")
+cat("Mean elevation: ", mean$getInfo())
+
+scale <- srtm$projection()$nominalScale()
+cat("SRTM scale in meters", scale$getInfo())
+```
+
+```{r download-image-collection}
+l8 <- ee$ImageCollection("COPERNICUS/S2_HARMONIZED")
+l8 <- l8$filterBounds(EE_geom)
+l8 <- l8$filterDate("2019-01-01", "2023-01-01")
+
+geemap$download_ee_image_collection(l8, out_dir = "/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive", region = EE_geom, crs = "EPSG:4326", scale = 10, num_threads = 4)
+
+point <- ee$Geometry$Point(-1.215472, 51.769139)
+
+spatialFiltered <- l8$filterBounds(point)
+ee_get_date_ic(spatialFiltered)
+
+cloudFiltered <- spatialFiltered$filter(ee$Filter$lt('CLOUDY_PIXEL_PERCENTAGE', 20))
+
+temporalFiltered <- cloudFiltered$filterDate("2015-01-01", "2019-12-31")
+
+ee_get_date_ic(temporalFiltered)
+```
+
+```{r}
+# This will sort from least to most cloudy.
+sorted <- temporalFiltered$sort("CLOUD_COVER")
+
+# Get the first (least cloudy) image.
+scene <- sorted$first()
+
+Map$centerObject(scene, 8)
+Map$addLayer(
+  scene,
+  list(bands = c("B4", "B3", "B2"), max = 0.3),
+  "default RGB"
+)
+```
+
+```{r}
+dataset <- ee$ImageCollection("MODIS/MCD43A4_006_EVI")$
+  filter(ee$Filter$date("2018-04-01", "2018-05-01"))
+
+colorized <- dataset$select("EVI")
+colorizedVis <- list(
+  min = 0.0,
+  max = 1.0,
+  palette = c(
+    "FFFFFF", "CE7E45", "DF923D", "F1B555", "FCD163", "99B718", "74A901",
+    "66A000", "529400", "3E8601", "207401", "056201", "004C00", "023B01",
+    "012E01", "011D01", "011301"
+  )
+)
+Map$setCenter(-1.215472, 51.769139, 12)
+Map$addLayers(eeObject = colorized, visParams = colorizedVis, name = "Colorized")
+```
+
+```{r}
+landsat2020 <- l8$filterDate("2020-01-01", "2020-12-31")
+
+median <- landsat2020$median()
+
+visParams <- list(bands = c("B4", "B3", "B2"), max = 0.3)
+
+# Display the median composite.
+Map$addLayer(median, visParams, "median")
+```
+
+```{r}
+# Load or import the Hansen et al. forest change dataset.
+hansenImage <- ee$Image("UMD/hansen/global_forest_change_2020_v1_8")
+
+# Select the land/water mask.
+datamask <- hansenImage$select("datamask")
+
+# Create a binary mask.
+mask <- datamask$eq(1)
+
+# Update the composite mask with the water mask.
+maskedComposite <- median$updateMask(mask)
+Map$addLayer(maskedComposite, visParams, "masked")
+```
+
+```{r}
+# Make a water image out of the mask.
+water <- mask$Not()
+
+# Mask water with itself to mask all the zeros (non-water).
+water <- water$mask(water)
+
+# Make an image collection of visualization images.
+mosaic <- ee$ImageCollection(list(
+  median$visualize(bands = c("B4", "B3", "B2"), max = 0.3),
+  water$visualize(palette = "000044")
+))$mosaic()
+
+# Display the mosaic.
+Map$addLayer(
+  mosaic,
+  {},
+  "custom mosaic"
+)
+```
+
+```{r}
+# Define a point of interest. Use the UI Drawing Tools to import a point
+# geometry and name it "point" or set the point coordinates with the
+# ee$Geometry$Point() function as demonstrated here.
+buff <- ee$Geometry$Point(c(-1.215472, 51.769139))$buffer(1000)
+
+cat(unlist(buff$getInfo()))
+
+# Import the Landsat 8 TOA image collection.
+l8 <- ee$ImageCollection("LANDSAT/LC08/C01/T1_TOA")
+
+# Get the least cloudy image in 2015.
+image <- ee$Image(
+  l8$filterBounds(buff)$
+    filterDate("2021-01-01", "2021-12-31")$
+    sort("CLOUD_COVER")$
+    first()
+)
+
+# Compute the Normalized Difference Vegetation Index (NDVI).
+nir <- image$select("B5")
+red <- image$select("B4")
+ndvi <- nir$subtract(red)$divide(nir$add(red))$rename("NDVI")
+
+# Display the result.
+Map$centerObject(image, 9)
+ndviParams <- list(
+  min = -1,
+  max = 1,
+  palette = brewer.pal("RdYlGn", n = 9)
+)
+Map$addLayer(ndvi, ndviParams, "NDVI image")
+```
+
+```{r}
+addNDVI <- function(image) {
+  ndvi <- image$normalizedDifference(c("B5", "B4"))$rename("NDVI")
+  return(image$addBands(ndvi))
+}
+
+# Test the addNDVI function on a single image.
+ndvi <- addNDVI(image)$select("NDVI")
+
+withNDVI <- l8$map(addNDVI)
+# Make a "greenest" pixel composite.
+greenest <- withNDVI$qualityMosaic("NDVI")
+
+# Display the result.
+visParams <- list(bands = c("B4", "B3", "B2"), max = 0.3)
+Map$addLayer(
+  greenest,
+  visParams,
+  "Greenest pixel composite"
+)
+```
+
+```{r}
+
+options(timeout = 600) # or large in case of slow network
+install.packages("starsdata", 
+    repos = "http://pebesma.staff.ifgi.de", type = "source")
+
+```
+
+```{r}
+# This function masks clouds in Landsat 8 imagery.
+maskClouds <- function(image) {
+  scored <- ee$Algorithms$Landsat$simpleCloudScore(image)
+  return(image$updateMask(scored$select(c("cloud"))$lt(20)))
+}
+
+# This function masks clouds and adds quality bands to Landsat 8 images.
+addQualityBands <- function(image) {
+  return(maskClouds(image)$
+    # NDVI
+    addBands(image$normalizedDifference(c("B5", "B4")))$
+    addBands(image$metadata("system:time_start")))
+}
+
+# Load a 2014 Landsat 8 ImageCollection.
+# Map the cloud masking and quality band function over the collection.
+collection <- ee$ImageCollection("LANDSAT/LC08/C01/T1_TOA")$
+  filterDate("2020-06-01", "2020-12-31")$
+  map(addQualityBands)
+
+# Create a cloud-free, most recent value composite.
+recentValueComposite <- collection$qualityMosaic("system:time_start")
+
+# Create a greenest pixel composite.
+greenestPixelComposite <- collection$qualityMosaic("nd")
+
+# Display the results.
+Map$setCenter(-1.216, 51.769, 12) # San Francisco Bay
+vizParams <- list(
+  bands = c("B5", "B4", "B3"),
+  min = 0,
+  max = 0.4
+)
+Map$addLayer(
+  eeObject <- recentValueComposite,
+  vizParams <- vizParams,
+  name <- "recent value composite"
+)
+
+fc <- ee$FeatureCollection("TIGER/2016/Roads")
+Map$setCenter(-1.216, 51.769, 12)
+Map$addLayer(
+  fc,
+  {},
+  "Census roads"
+)
+```
+
+```{r}
+# Load a Landsat 8 input image.
+image <- ee$Image("LANDSAT/LC08/C01/T1/LC08_044034_20140318")
+
+# Creat an arbitrary region.
+geometry <- ee$Geometry$Rectangle(-1.26, 51.6, -1.3, 51.8)
+
+# Make an NDWI image$  It will have one band named 'nd'.
+ndwi <- image$normalizedDifference(c("B4", "B5"))
+
+# Compute the weighted mean of the NDWI image clipped to the region.
+weighted <- ndwi$clip(geometry)$
+  reduceRegion(
+  reducer<- ee$Reducer$sum(),
+  geometry<- geometry,
+  scale<- 30
+)$get("nd")
+
+# Compute the UN-weighted mean of the NDWI image clipped to the region.
+unweighted <- ndwi$clip(geometry)$
+  reduceRegion(
+  reducer<- ee$Reducer$sum()$unweighted(),
+  geometry<- geometry,
+  scale<- 30
+)$get("nd")
+
+# Observe the difference between weighted and unweighted reductions.
+cat("weighted:", unlist(weighted$getInfo()))
+cat("unweighted", unlist(unweighted$getInfo()))
+```
+
+```{r}
+
+s2 = ee$ImageCollection('COPERNICUS/S2_HARMONIZED')
+#admin1 = ee$FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level1');
+    
+#karnataka = admin1$filter(ee$Filter$eq('ADM1_NAME', 'Karnataka'));
+geometry = ee$Geometry$Point(c(0.274, 52.0947))$buffer(1000)
+geometry$getInfo()
+rgbVis = list(min = 0.0, max = 3000, bands = c('B4', 'B3', 'B2'));
+
+filtered = s2$filter(ee$Filter$lt('CLOUDY_PIXEL_PERCENTAGE', 20))$
+  filter(ee$Filter$date('2022-01-01', '2023-01-01'))$
+  filter(ee$Filter$bounds(geometry));
+
+composite = filtered$median()$clip(geometry);
+Map$centerObject(geometry)
+Map$addLayer(composite, rgbVis, 'Karnataka Composite')
+
+addNDVI <- function(image) {
+  ndvi = image$normalizedDifference(c('B8', 'B4'))$rename('ndvi')
+  image$addBands(ndvi);
+}
+
+withNdvi = filtered$map(addNDVI)
+
+composite = withNdvi$median()
+
+ndviComposite1 = withNdvi$select('ndvi')$median()$clip(geometry)
+
+
+palette = c(
+  'FFFFFF', 'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718',
+  '74A901', '66A000', '529400', '3E8601', '207401', '056201',
+  '004C00', '023B01', '012E01', '011D01', '011301')
+
+pal = brewer.pal("RdYlGn", n = 9)
+
+ndviVis = list(min=0, max=0.5, palette=pal)
+
+ee_image_info(ndviComposite1)
+
+ndviComposite$getInfo()
+
+Map$addLayer(ndviComposite1, ndviVis, 'ndvi')
+
+ee_as_stars(ndviComposite, via ="drive")
+  
+```
+
+```{r}
+
+
+
+
+
+```

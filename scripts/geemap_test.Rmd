@@ -1,0 +1,13 @@
+---
+title: "R Notebook"
+output: html_document
+---
+
+```{python}
+import ee
+import geemap
+Map = geemap.Map(center =(40, -100), zoom = 4)
+Map
+Map.add_basemap('OpenTopoMap')
+Map
+```

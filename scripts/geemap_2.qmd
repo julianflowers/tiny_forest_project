@@ -1,0 +1,81 @@
+---
+title: "geemap_2"
+format: html
+editor: visual
+execute: 
+  cache: false
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+```{r}
+#| cache: true
+library(rgee)
+library(reticulate)
+reticulate::virtualenv_list()
+reticulate::virtualenv_remove("geemap")
+reticulate::virtualenv_create("geemap")
+reticulate::use_virtualenv("geemap")
+
+py_install("earthengine-api", envname = "geemap", pip = TRUE)
+py_install("geemap", envname = "geemap", pip = TRUE)
+py_install("IPython", pip = TRUE, envname = "geemap") #install the IPython package
+py_install("planet", pip = TRUE, envname = "geemap")
+#y_install("rasterio", pip = TRUE, envame = "geemap")
+py_install("ipyleaflet", pip = TRUE, envame = "geemap")
+
+
+ee <- import("ee")
+leaflet <- import("ipyleaflet")
+#rast <- import("rasterio")
+planet <- import("planet")
+ipy <- import("IPython")
+geemap <- import("geemap")
+folium <- import("folium")
+os <- import("os")
+
+
+ee$Authenticate()
+
+
+
+```
+
+```{r}
+
+geemap <- import("geemap")
+
+ee$Initialize()
+
+
+Map = ee$Map
+gee <- geemap$foliumap
+plotly <- geemap$plotlymap
+
+
+
+geemap$basemaps$OpenStreetMap.BlackAndWhite
+
+```
+
+### PLANET
+
+```{r}
+
+tile_format = "ipyleaflet"
+
+tiles <- geemap$planet_monthly_tiles(api_key = "PLAK6dc7ecf494e447c08fcf08fd1cc16f99", tile_format = tile_format)
+
+ts <- geemap$ts_inspector(tiles)
+
+ts
+
+m = geemap$Map()
+
+m$add_planet_by_month(year=2020, month=8, api_key = "PLAK6dc7ecf494e447c08fcf08fd1cc16f99")
+m
+
+
+```

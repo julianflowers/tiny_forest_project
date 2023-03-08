@@ -1,0 +1,546 @@
+---
+title: "Tiny forest biodiversity using NBN atlas data"
+format: 
+    html:
+      toc: true
+      toc_float: yes
+    docx: 
+      toc: true
+    pdf:
+      toc: true
+params:
+date: "`r lubridate::today()`"
+author: 
+   - name: "Julian Flowers"
+     orcid: "0000-0001-5262-4526"
+editor: visual
+
+execute: 
+  cache: true
+  echo: true
+  message: false
+  warning: false
+bibliography: references.bib
+csl: harvard-cite-them-right.csl
+---
+
+```{r setup, in}
+library(needs)
+needs(tidyverse, sf, mapview, vegan, rvest, myScrapers, here)
+```
+
+## Introduction
+
+-   The [National Biodiversity Atlas (NBN)](https://nbnatlas.org/) is an open, online repository of UK observation data of UK taxa pooled from a a wide range of primary sources.
+
+-   It is managed by the National Biodiversity Network and at September 2021 contained over 220 million records.
+
+-   It has a range of tools for accessing and visualising the data, but also provides an application programming interface (API) which makes it possible to extract large amounts of data using tools like R or Python.
+
+## Tiny Forests
+
+-   Details of TFs scraped from the [EarthWatch](https://tinyforest.earthwatch.org.uk/tiny-forest-sites) website
+
+-   They are influenced by the work of the Japanese ecologist Miyawaki.[@Miyawaki1993-ji; @Miyawaki1999-ai; @Miyawaki1998-ru; @Miyawaki2004-di]
+
+```{r create-list-tf}
+
+tf_uri <- "https://tinyforest.earthwatch.org.uk/tiny-forest-sites"
+
+
+tf_links <- get_page_links(tf_uri) %>%
+  .[18:370] |>
+  unique() |>
+  enframe() |>
+  mutate(url = paste0(tf_uri, value))
+
+get_planting_info <- function(link){
+  
+  link |>
+  read_html() |>
+  html_nodes(".uk-padding-remove-top") |>
+  html_text2()
+}
+
+tf_links <- tf_links |>
+  mutate(planting_info = map(url, get_planting_info)) |>
+  unnest("planting_info")
+
+tf_links <- tf_links |>
+  mutate(plant = str_split(planting_info, "\\n")) |>
+  unnest("plant") |>
+  filter(!str_detect(plant, c("Plant|By|Date|Area|Class|Featu|Path")))
+
+tf_details <- tf_links |>
+  group_by(name) |>
+  mutate(planted_by = plant[1], 
+         plant_date = plant[2], 
+         plant_area = plant[3]) |>
+  select(-plant, -planting_info) |>
+  slice(1:3) |>
+  distinct() |>
+  mutate(stub = str_remove(value, "/tiny-forest-sites/8-tiny-forest/"), 
+         id = parse_number(stub), 
+         plant_area = parse_number(plant_area), 
+         plant_area = units::set_units(plant_area, "m^2"))
+```
+
+```{r}
+
+tfs_lat_longs <- read_html(tf_uri) |>
+  html_text() |>
+  str_extract("lat.+:\\.?\\d{2,}") |>
+  str_split("\\}") |>
+  enframe() |>
+  unnest("value") |>
+  mutate(core = str_remove(value, "icon.:.*"), 
+        lat = parse_number(str_extract(core, "lat.:\\d{2}\\.\\d{2,10}")), 
+        long = parse_number(str_extract(core, "lng.:-?\\d{1,2}\\.\\d{2,10}")),
+        title = str_extract(core, "title.:.*"), 
+        title = str_remove(title, "title.:"), 
+        title = str_remove(title, ',"')
+         ) |>
+  select(title, lat, long) |>
+  drop_na()
+
+tfs_sf <- st_as_sf(tfs_lat_longs, coords = c("long", "lat"), crs = 4326)
+
+tfs_sf <- bind_cols(tfs_sf, tf_details)
+
+tfs_lat_longs |>
+  write_csv("tf_lat_long.csv")
+
+mapview(tfs_sf, col.regions = tfs_sf$plant_area)
+```
+
+## Load NBN Atlas data
+
+```{r}
+
+tf_nbn <- read_csv("tiny_forest_biodiversity.csv", show_col_types = FALSE)
+
+## filter to 2010 to 2022
+
+tf_nbn_2010 <- tf_nbn |>
+  filter(between(year, 2010, 2022))
+
+## link to tf details
+
+tf_nbn_join <- tf_nbn_2010 |>
+  left_join(tfs_sf, by = c("id" = "title"))
+
+
+
+```
+
+## EDA of NBN data
+
+```{r, fig.height=8, fig.width=6}
+
+## counts by year, class and tf
+
+tf_nbn_join |>
+  group_by(id) |>
+  mutate(tot_obs = n()) |>
+  ungroup() |>
+  group_by(classs, year) |>
+  mutate(n = n()) |>
+  filter(n > 1000) |>
+  group_by(id, id.y, classs, year) |>
+  mutate(n1 = n()) |>
+  arrange(id.y, year) |>
+  ungroup() |>
+  ggplot() +
+  geom_tile(aes(year, fct_reorder(factor(id.y), tot_obs), fill = n1)) +
+  facet_wrap(~ classs, nrow = 1) +
+  ggthemes::theme_base() +
+  scale_fill_viridis_c(direction = -1, option = "rocket") +
+  theme(axis.text.x = element_text(size = 12), 
+        axis.text.y = element_text(size = 8)) +
+  labs(x = "", 
+       y = "")
+
+
+
+
+```
+
+## Estimating species richness over time for each TF buffer (NB based on observation frequency)
+
+### Birds
+
+```{r, fig.height=6, fig.width=6}
+library(vegan)
+
+## Birds
+
+
+tf_nbn_wide <- tf_nbn_join |>
+  filter(classs == "Aves") |>
+  count(id, id.y, species, vernacularName, year) |>
+  pivot_wider(names_from = c("species", "vernacularName"), values_from = "n", values_fill = 0) 
+
+tf_nbn_sp_richness <- tf_nbn_wide %>%
+  vegan::specnumber() |>
+  bind_cols(tf_nbn_wide) |>
+  select(id, id.y, year, sp_rich = 1) |>
+  arrange(id.y, year)
+
+
+
+tf_nbn_sp_richness |>
+  filter(year < 2020) |>
+  ggplot() +
+  geom_tile(aes(factor(year), reorder(id.y, sp_rich), fill = sp_rich)) +
+  labs(x = "", 
+       y = "") +
+  ggthemes::theme_base() +
+  scale_fill_viridis_c(name = "Species\nrichness") +
+  theme(axis.text.y = element_text(size = 9)) +
+  coord_cartesian()
+  
+
+
+
+
+```
+
+### Insects
+
+```{r, fig.height=6, fig.width=6}
+library(vegan)
+
+## Insects
+
+
+tf_nbn_wide_insecta <- tf_nbn_join |>
+  filter(classs == "Insecta") |>
+  count(id, id.y, species, vernacularName, year) |>
+  pivot_wider(names_from = c("species", "vernacularName"), values_from = "n", values_fill = 0) 
+
+tf_nbn_sp_richness_insecta <- tf_nbn_wide_insecta %>%
+  vegan::specnumber() |>
+  bind_cols(tf_nbn_wide_insecta) |>
+  select(id, id.y, year, sp_rich = 1) |>
+  arrange(id.y, year)
+
+tf_nbn_sp_richness_insecta |>
+  filter(year < 2020) |>
+  ggplot() +
+  geom_tile(aes(factor(year), reorder(id.y, sp_rich), fill = sp_rich)) +
+  labs(x = "", 
+       y = "") +
+  ggthemes::theme_base() +
+  scale_fill_viridis_c(name = "Species\nrichness") +
+  theme(axis.text.y = element_text(size = 9)) +
+  coord_cartesian()
+  
+
+## Plants
+
+tf_nbn_wide_plants <- tf_nbn_join |>
+  filter(classs == "Magnoliopsida") |>
+  count(id, id.y, species, vernacularName, year) |>
+  pivot_wider(names_from = c("species", "vernacularName"), values_from = "n", values_fill = 0) 
+
+tf_nbn_sp_richness_plants <- tf_nbn_wide_plants %>%
+  vegan::specnumber() |>
+  bind_cols(tf_nbn_wide_plants) |>
+  select(id, id.y, year, sp_rich = 1) |>
+  arrange(id.y, year)
+
+tf_nbn_sp_richness_plants |>
+  filter(year < 2020) |>
+  ggplot() +
+  geom_tile(aes(factor(year), reorder(id.y, sp_rich), fill = sp_rich)) +
+  labs(x = "", 
+       y = "") +
+  ggthemes::theme_base() +
+  scale_fill_viridis_c(name = "Species\nrichness") +
+  theme(axis.text.y = element_text(size = 9)) +
+  coord_cartesian()
+
+```
+
+```{r}
+
+insecta_long <- tf_nbn_sp_richness_insecta |>
+  pivot_longer(names_to = "taxa", values_to = "vals", cols = 4:ncol(tf_nbn_sp_richness_insecta))
+
+aves_long <- tf_nbn_sp_richness |>
+  pivot_longer(names_to = "taxa", values_to = "vals", cols = 4:ncol(tf_nbn_sp_richness))
+
+plants_long <- tf_nbn_sp_richness_plants |>
+  pivot_longer(names_to = "taxa", values_to = "vals", cols = 4:ncol(tf_nbn_sp_richness_plants))
+
+
+aves_long |>
+  left_join(insecta_long, by = c("id.y", "year")) |>
+  left_join(plants_long, by = c("id.y", "year")) |>
+  ggplot() +
+  geom_point(aes(vals.y, vals.x)) +
+  geom_smooth(aes(vals.y, vals.x), se = FALSE, method = "lm", colour = "red") +
+  geom_point(aes(vals.y, vals), colour = "blue") +
+  geom_smooth(aes(vals.y, vals), se = FALSE, method = "lm") +
+  facet_wrap(~year)
+
+```
+
+## Import Earth Watch files
+
+```{r}
+## earth watch files
+
+p <- here("/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive/dissertation/FW_ MSc project and Tiny Forests")
+
+f <- list.files(p, "csv", full.names = T)
+
+csvs <- map(f, read_csv, show_col_types = FALSE)
+
+csvs <- map(csvs, janitor::clean_names) ## convert variable names to lower snake case
+
+csvs <- map(csvs, janitor::remove_empty) ## remove empty rows
+
+basenames <- map(f, basename)
+
+```
+
+## Butterfly and insect diversity
+
+```{r}
+
+insect_data <- csvs[c(2,6,7)]
+
+insect_data[[1]] <- rename(insect_data[[1]], species = butterfly_species)
+
+
+insect_data <- map_dfr(insect_data, select, contains("tiny"), contains("species"), contains("event"), contains("qty"))
+
+insect_data |>
+  arrange(tiny_forest_id) |>
+  filter(tiny_forest_id != 84) |>
+  count(date = lubridate::dmy(event_date)) |>
+  ggplot() +
+  geom_point(aes(date, n), pch = 1) +
+  geom_line(aes(date, n)) +
+  ggthemes::theme_base()
+
+
+```
+
+## Trees
+
+```{r}
+
+
+tree_data <- csvs[[12]] |>
+  filter(tiny_forest_id !=84)
+  
+
+trees_per_tf <- tree_data |>
+  group_by(tiny_forest_id) |>
+  summarise(n_trees = sum(species_quantity))
+
+tfs_sf |>
+  left_join(trees_per_tf, by = c("id" = "tiny_forest_id")) |>
+  mutate(tree_density = n_trees / plant_area) |>
+  mapview(zcol = "tree_density", map.types = c("OpenTopoMap", "Esri.WorldImagery"), name = "Tree density")
+  
+
+# trees_per_tf |>
+#   ggplot() +
+#   geom_density(aes(n_trees))
+```
+
+## Extracting NBN records for multiple locations
+
+-   A function to extract NBN atlas data wthin a given radius of a specified point.
+-   The function takes as arguments *longitude, latitude, buffer size (in km), number of records to be downloaded (default is 10000)*
+-   It passes the parameters to create an API call which is returned as a data frame
+
+```{r nbn-function}
+get_nbn_buffer <- function(lon, lat, radius = 1, n = 10000){
+
+  require(dplyr)
+  require(jsonlite)
+  require(tictoc)
+
+  tic()
+
+  base_url <- "https://records-ws.nbnatlas.org/occurrences/search?q=*:*&"
+  search <- paste0(base_url, "lat=", lat, "&lon=", lon, "&radius=", radius, "&pageSize=", n)
+  df <- fromJSON(search, simplifyDataFrame = TRUE)
+  
+  toc()
+  
+  df$occurrences |>
+    select(kingdom:genus, contains("decimal"), year, month, dataProviderName, speciesGroups, vernacularName, species)
+
+
+}
+```
+
+### Example
+
+Extract 35,000 NBN records from the 1km buffer around the Witney TF (takes \~ 50 seconds).
+
+```{r witney}
+
+witney <-  tfs_lat_longs[1, ]
+
+witney_nbn <- get_nbn_buffer(witney$long, witney$lat, 1, 35000)
+
+dim(witney_nbn)
+
+
+
+```
+
+## Set up datasets for analysis with `vegan` package functions
+
+Count observations by class and year since 2000 and calculate specioseness by year
+
+```{r wide-data}
+witney_nbn_wide <- witney_nbn |>
+  count(classs, year) |>
+  filter(between(year, 2010, 2022)) |>
+  pivot_wider(names_from = "year", values_from = "n", values_fill = 0)
+
+witney_nbn_wide
+
+witney_nbn_wide_aves <- witney_nbn |>
+  filter(between(year, 2010, 2022), classs == "Aves") |>
+  count(species, vernacularName, year) |>
+  pivot_wider(names_from = c("species", "vernacularName"), values_from = "n", values_fill = 0) |>
+  arrange(year)
+  
+
+witney_nbn_wide_insecta <- witney_nbn |>
+  filter(between(year, 2010, 2022), classs == "Insecta") |>
+  count(species, vernacularName, year) |>
+  pivot_wider(names_from = c("species", "vernacularName"), values_from = "n", values_fill = 0) |>
+  arrange(year)
+
+witney_nbn_wide_magnoliopsida <- witney_nbn |>
+  filter(between(year, 2010, 2022), classs == "Magnoliopsida") |>
+  count(species, vernacularName, year) |>
+  pivot_wider(names_from = c("species", "vernacularName"), values_from = "n", values_fill = 0) |>
+  arrange(year)
+  
+```
+
+## Species richness
+
+```{r species richness}
+
+witney_nbn_wide_aves |>
+  select(2:ncol(witney_nbn_wide_aves)) |>
+  vegan::specnumber() |>
+  plot()
+
+witney_nbn_wide_insecta |>
+  select(2:ncol(witney_nbn_wide_insecta)) |>
+  vegan::specnumber() |>
+  plot()
+
+witney_nbn_wide_magnoliopsida|>
+  select(2:ncol(witney_nbn_wide_magnoliopsida)) |>
+  vegan::specnumber() |>
+  plot()
+
+```
+
+## Rarefy
+
+```{r}
+
+w_s <- witney_nbn_wide_aves |>
+  select(2:ncol(witney_nbn_wide_aves)) 
+
+S <- w_s |>
+  vegan::specnumber()
+
+rare <- vegan::rarefy(w_s, sample = 100)
+
+plot(S, rare)
+
+
+
+ggplot() +
+  geom_point(aes(S, rare)) +
+  ggthemes::theme_base() +
+  geom_abline(intercept = 0, slope = 1) +
+  ylim(c(18, 45)) +
+  xlim(c(18, 45))
+
+```
+
+```{r}
+
+witney_nbn_wide_aves |>
+  select(2:ncol(witney_nbn_wide_aves)) |>
+  vegan::specnumber()
+
+
+```
+
+## Diversity indices
+
+```{r diversity}
+
+witney_nbn_wide_aves |>
+  select(2:ncol(witney_nbn_wide_aves)) |>
+  vegan::diversity(index = "simpson") |>
+  plot()
+
+witney_nbn_wide_insecta |>
+  select(2:ncol(witney_nbn_wide_insecta)) |>
+  vegan::diversity(index = "simpson") |>
+  plot()
+
+witney_nbn_wide_magnoliopsida |>
+  select(2:ncol(witney_nbn_wide_magnoliopsida)) |>
+  vegan::diversity(index = "simpson") |>
+  plot()
+
+```
+
+## Greenspace
+
+```{r}
+
+gs_path <- here::here("/Users/julianflowers/Dropbox/My Mac (Julians-MBP-2)/Downloads/OS Open Greenspace (GPKG) GB/data")
+
+gf <- list.files(gs_path, "gpkg", full.names = TRUE)
+
+gs_data <- read_sf(gf[1], layer = "GreenspaceSite")
+
+allotments <- gs_data |>
+  filter(str_detect(`function`, "Allotment")) 
+
+area <- st_area(allotments) |>
+  st_bind_cols(allotments)
+centroid <- st_centroid(allotments)  |>
+  st_transform(4326)
+
+centroid |>
+  mapview(cex = 0.1) +
+  mapview(area, col.regions = "darkgreen")
+  
+allot_near_tf <- st_distance(centroid, tfs_sf) |>
+  data.frame() |>
+  bind_cols(id = centroid$id) |>
+  pivot_longer(names_to = "green", values_to = "vals", cols = X1:X171) |>
+  mutate(vals = units::drop_units(vals)) |>
+  filter(vals < 5000)
+
+ids <- pluck(allot_near_tf, "id")
+
+tfs_sf_buff <- st_buffer(tfs_sf, 5000)
+
+allotments |>
+  filter(id %in% ids) |>
+  mapview() +
+  mapview(tfs_sf_buff, col.regions = "yellow")
+
+```
