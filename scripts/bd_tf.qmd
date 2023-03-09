@@ -105,7 +105,11 @@ tfs_lat_longs <- read_html(tf_uri) |>
 
 tfs_sf <- st_as_sf(tfs_lat_longs, coords = c("long", "lat"), crs = 4326)
 
+
+
 tfs_sf <- bind_cols(tfs_sf, tf_details)
+
+tfs_sf |> write_sf("tfs_sf.shp")
 
 tfs_lat_longs |>
   write_csv("tf_lat_long.csv")
@@ -117,7 +121,7 @@ mapview(tfs_sf, col.regions = tfs_sf$plant_area)
 
 ```{r}
 
-tf_nbn <- read_csv("tiny_forest_biodiversity.csv", show_col_types = FALSE)
+tf_nbn <- data.table::fread("https://github.com/julianflowers/tiny_forest_project/raw/main/large-data/tiny_forest_biodiversity.csv")
 
 ## filter to 2010 to 2022
 
@@ -134,6 +138,35 @@ tf_nbn_join <- tf_nbn_2010 |>
 ```
 
 ## EDA of NBN data
+
+```{r}
+species_yr_id_matrix <- tf_nbn_join[, .N, by = .(id, species, year)][order(id, -N)] |>
+  pivot_wider(names_from = "species", values_from = "N", values_fill = 0) |>
+  arrange(id, year)
+
+observation_count <- tf_nbn_join[, .N, by = .(id, year)][order(id, -N)]
+
+global_species_richness <- species_yr_id_matrix |>
+  vegan::specnumber() |>
+  bind_cols(species_yr_id_matrix) |>
+  select(id, year, rich = ...1) |>
+  left_join(observation_count)
+
+global_species_richness |>
+  group_by(id) |>
+  summarise(median_r = median(rich), 
+            mean_r = mean(rich), 
+            sd = sd(rich), 
+            sum = sum(N))
+
+global_species_richess |>
+  ggplot() +
+  geom_boxplot(aes(fct_rev(factor(year)), rich)) +
+  ggthemes::theme_base() +
+  coord_flip()
+
+
+```
 
 ```{r, fig.height=8, fig.width=6}
 
@@ -544,3 +577,5 @@ allotments |>
   mapview(tfs_sf_buff, col.regions = "yellow")
 
 ```
+
+## References

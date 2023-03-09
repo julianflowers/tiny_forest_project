@@ -7,52 +7,42 @@ p_load(tidyverse, here, janitor, units, sf, mapview)
 library(tidyverse, warn.conflicts = TRUE)
 
 ## load scraped tiny forest details (101 tfs)
-tf <- read_csv("tiny_forests.csv")
+tf <- read_sf("scripts/tfs_sf.shp")
 
-
-## pivot wider to split out total area and classroom area
-tf_details <- dplyr::select(tf, id:lon)
-tf_details <- tf_details |>
-  group_by(id) |>
-  mutate(row_id = row_number()) |>
-  pivot_wider(names_from = "row_id", names_prefix = "area", values_from = "area") |>
-  rename(area = area1, class_area = area2)
 
 ## tf area distribution
 
-tf_details |>
-  mutate(area = units::set_units(area, m2), 
-         class = units::set_units(area, m2)) |>
+tf |>
   ggplot() +
-  geom_density(aes(area)) +
-  labs(title = "Tiny forest areas (N = 101)") +
+  geom_density(aes(plant_area)) +
+  labs(title = paste0("Tiny forest areas (N = ", nrow(tf), ")")) +
   theme(plot.title.position = "plot")
 
-## tf map 
+## tf map
 
 uk <- map_data(map = "world", region = "UK")
 
 
-uk_sf <- st_as_sf(uk, coords = c("long", "lat"), crs = 4326)
+#uk_sf <- st_as_sf(uk, coords = c("long", "lat"), crs = 4326)
 
-tf_details_sf <- st_as_sf(tf_details, coords = c("lon" ,"lat"), crs = 4326)
+#tf_details_sf <- st_as_sf(tf_details, coords = c("lon" ,"lat"), crs = 4326)
 
 
 ## interactive
-tf_details_sf |>
-  mapview(col.regions = tf_details_sf$area)
+tf |>
+  mapview(col.regions = tf$plant_area)
 
 
 ## static
-tf_details_sf |>
-  #st_transform(27700) |>
-  ggplot() +
-  ggspatial::annotation_map_tile(zoomin = 3) +
-  #geom_sf(data = uk_bound, size = 0.2) 
-  geom_sf(aes(colour = area)) +
-  coord_sf(crs = 27700) +
-  viridis::scale_colour_viridis(direction = -1, option = "viridis") +
-  theme_void() 
+# tf |>
+#   #st_transform(27700) |>
+#   ggplot() +
+#   ggspatial::annotation_map_tile(zoomin = 3) +
+#   #geom_sf(data = uk_bound, size = 0.2)
+#   geom_sf(aes(colour = plant_area)) +
+#   coord_sf(crs = 27700) +
+#   viridis::scale_colour_viridis(direction = -1, option = "viridis") +
+#   theme_void()
 
 
 
@@ -60,17 +50,18 @@ tf_details_sf |>
 
 ## earth watch files
 
-p <- here("/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive/dissertation/FW_ MSc project and Tiny Forests")
-
+p <- here("data")
 f <- list.files(p, "csv", full.names = T)
+f
 
-csvs <- map(f, read_csv)
+csvs <- map(f[c(1:6, 17:23, 27)], read_csv)
 
 csvs <- map(csvs, janitor::clean_names) ## convert variable names to lower snake case
 
 csvs <- map(csvs, janitor::remove_empty) ## remove empty rows
 
-basenames <- map(f, basename)
+
+basenames <- map(f[c(1:6, 17:23, 27)], basename)
 
 
 ## tree data
@@ -88,15 +79,19 @@ trees_per_tf |>
 
 ## tree density
 
-tf_details <- tf_details |>
+tf_details <- tf |>
   full_join(tree_data, by = c("id" = "tiny_forest_id")) |>
   group_by(id) |>
-  mutate(n_trees = sum(species_quantity), 
-         area = area, 
-         tree_density = units::set_units(n_trees / area, m2), 
+  mutate(n_trees = sum(species_quantity),
+         area = plant_area,
+         tree_density = units::set_units(n_trees / area, m-2),
          n_species = n_distinct(species_name)
   ) |>
-  distinct() 
+  drop_na() |>
+  distinct()
+
+tf_details |>
+  summary()
 
 ## tree counts wide data and save as csv
 
@@ -105,7 +100,7 @@ tf_details_wide <- tf_details |>
   pivot_wider(names_from = "species_name", values_from = "species_quantity", values_fill = 0)
 
 tf_details_wide |>
-  write_csv("tf-data-1.csv")
+  write_csv("data/tf-trees-wide.csv")
 
 
 
@@ -113,20 +108,22 @@ tf_details_wide |>
 ## tree variation
 
 tree_data |>
-  full_join(tf_details, by = c("tiny_forest_id" = "id")) |>
-  group_by(species_name.y) |>
+  full_join(tf, by = c("tiny_forest_id" = "id")) |>
+  group_by(species_name) |>
   mutate(tot_trees = n()) |>
-  filter(!str_detect(tiny_forest_name.x, "Earth")) |>
+  filter(!str_detect(tiny_forest_name, "Earth")) |>
   ggplot() +
-  geom_tile(aes(fct_reorder(tiny_forest_name.x, -tiny_forest_id), fct_reorder(species_name.x, -tot_trees), fill = species_quantity.x)) +
+  geom_tile(aes(fct_reorder(tiny_forest_name, -tiny_forest_id), fct_reorder(species_name, -tot_trees), fill = species_quantity)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   coord_flip() +
-  labs(x = "", 
+  labs(x = "",
        y = "") +
   scale_fill_distiller(name = "Count", direction = 1)
 
 ## carbon
 ### tagged trees
+
+basenames[[12]]
 
 tags <- csvs[[10]] |>
   filter(tiny_forest_id != 84) |>
@@ -143,11 +140,11 @@ carbon <- csvs[[3]] |>
 
 carbon_stats <- carbon |>
   group_by(species_name) |>
-  summarise(mean_height = mean(species_height_cm, na.rm = TRUE), 
-            sd = sd(species_height_cm, na.rm = TRUE), 
-            n = n(), 
-            se = sd / sqrt(n), 
-            mean_stem = mean(stem_1_ddh_mm, na.rm = TRUE), 
+  summarise(mean_height = mean(species_height_cm, na.rm = TRUE),
+            sd = sd(species_height_cm, na.rm = TRUE),
+            n = n(),
+            se = sd / sqrt(n),
+            mean_stem = mean(stem_1_ddh_mm, na.rm = TRUE),
             se_stem = sd(stem_1_ddh_mm, na.rm = TRUE) / sqrt(n))
 
 carbon |>
@@ -156,7 +153,7 @@ carbon |>
   ggplot() +
   geom_boxplot(aes(fct_reorder(species_name, median), species_height_cm)) +
   coord_flip() +
-  labs(x= "", 
+  labs(x= "",
        title = "Variation in tree heights by species") +
   theme(plot.title.position = "plot")
 
@@ -181,13 +178,13 @@ p1 <- here("/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers
 
 files <- list.files(p1, "csv", full.names = TRUE)
 
-pollinator_csv <- map_dfr(files, read_csv) 
+pollinator_csv <- map_dfr(files, read_csv)
 
 map(test, colnames)
 
 pollinator_csv <- pollinator_csv |>
-  dplyr::select(country, location_code:year, contains("habitat"), 
-                contains("target_"), contains("floral_unit"), 
+  dplyr::select(country, location_code:year, contains("habitat"),
+                contains("target_"), contains("floral_unit"),
                 bumblebees:all_insects_total)
 
 
@@ -220,7 +217,7 @@ poll_map <- grids[[3]] |>
 poll_map <- poll_map |>
   filter(!is.na(country))
 
-poll_map |> 
+poll_map |>
   ggplot() +
   geom_sf(data = uk_bounds) +
   geom_sf(aes(fill = all_insects_total))

@@ -2,7 +2,7 @@
 
 needs(tidyverse, vegan, broom, ggridges, umap)
 
-tiny_forest_biodiversity <- read_csv("tiny_forest_biodiversity.csv")
+tiny_forest_biodiversity <- read_csv("data/tiny_forest_biodiversity.csv")
 
 
 tiny_forest_biodiversity |>
@@ -39,7 +39,7 @@ area_rtsne$diss[[13]]$Y |>
 area_diversity |>
   unnest("div") |>
   group_by(year) |>
-  mutate(id = row_number(), 
+  mutate(id = row_number(),
          med = median(div)) |>
   ggplot(aes(y = factor(year), x = div), fill = div) +
   stat_density_ridges(scale = 2, quantile_lines = TRUE, quantiles = 2, alpha = 0.7) +
@@ -49,7 +49,7 @@ area_diversity |>
 area_diversity |>
   unnest("div") |>
   group_by(year) |>
-  mutate(id = row_number(), 
+  mutate(id = row_number(),
          mean = mean(div)) |>
   select(year, mean) |>
   distinct() |>
@@ -57,7 +57,7 @@ area_diversity |>
   geom_line(lty = "dotted") +
   geom_point() +
   geom_smooth(method = "gam") +
-  ggthemes::theme_few() 
+  ggthemes::theme_few()
 
 
 
@@ -70,7 +70,7 @@ area_umap <- class_loc |>
 ## birds
 
 birds <- tiny_forest_biodiversity |>
-  filter(between(year, 1990, 2022), 
+  filter(between(year, 1990, 2022),
          classs == "Aves")
 
 birds <- sf::st_as_sf(birds, coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
@@ -89,6 +89,6 @@ bird_l <- birds_nest |>
   mutate(spec_no = map(data, vegan::specnumber)) |>
   unnest("spec_no") |>
   select(-data) |>
-  pivot_wider(names_from = "year", values_from = "spec_no") 
+  pivot_wider(names_from = "year", values_from = "spec_no")
 
 bird_l
