@@ -12,6 +12,11 @@ format:
       toc: true
 editor: visual
 bibliography: references.bib
+execute: 
+  message: false
+  warning: false
+  echo: false
+  cache: true
 ---
 
 ## Introduction
@@ -37,6 +42,38 @@ bibliography: references.bib
 -   Tiny forest philosophy
 
 ### Tiny forest development in UK
+
+#### Locations
+
+```{r}
+
+Sys.setenv(GGMAP_GOOGLE_API_KEY= "AIzaSyBhAWbDyKX2chM2Jz0ZV22uT_8qN7YKL3Q")
+
+needs(ggmap, tidyverse, sf, here)
+
+tfs_uk <- read_csv(paste0(here("data"), "/tf_detail.csv")) 
+tfs_lat_long <- read_csv(paste0(here("scripts"), "/tf_lat_long.csv")) |>
+  slice(-c(180:185))
+
+tfs_lat_long <- tfs_lat_long |>
+  mutate(title = str_replace(title, ", ", "-"), 
+         title = str_remove_all(title, '"'),  
+         title = str_replace_all(title, "\\s", "-"), 
+         title = str_to_lower(title))
+
+tfs_uk <- tfs_uk |>
+  mutate(name = str_remove(stub, "\\d{2,3}-")) |>
+  bind_cols(tfs_lat_long)
+  
+
+ggmap::ggmap_credentials()
+
+p <- ggmap::get_googlemap(center = c(lon = tfs_lat_long$long[161], lat = tfs_lat_long$lat[161]), zoom = 6)
+
+ggmap(p) +
+  geom_jitter(aes(x = long, y = lat), data = tfs_lat_long, shape = "x")
+
+```
 
 ### Putative TF impacts
 
