@@ -1,0 +1,231 @@
+---
+title: "Tiny forest project plan"
+date: "`r format(Sys.Date(), '%B %d %Y')`"
+author: "Julian Flowers SID: 2050507"
+institute: "Anglia Ruskin University"
+format: 
+   html:
+      toc: true
+   docx: 
+      toc: true
+   pdf: 
+      toc: true
+editor: visual
+bibliography: references.bib
+---
+
+## Introduction
+
+### Biodiversity in UK
+
+-   Britain has been described as one of the most nature depleted countries[@whywen]
+
+-   Climate change
+
+-   Air quality
+
+-   Urbanisation
+
+### Urban restoration and nature-based solutions
+
+-   Urban restoration / nature based solutions
+
+### Tiny forests 
+
+-   Tiny forest definition [@Ottburg2018-ls; @hunston]
+
+-   Tiny forest philosophy
+
+### Tiny forest development in UK
+
+### Putative TF impacts
+
+## Hypotheses
+
+1.  Can TF growth be detected using satellite imagery?
+
+2.  Can TFs be classified e.g. urban/rural, landcover, age, location?
+
+3.  What is the impact of TFs on biodiversity?
+
+4.  ? Impact of TFs on pollution
+
+5.  Other outcomes?
+
+## Proposed methods
+
+### Literature review
+
+-   Search strategy
+
+    -   Urban forest / tiny forest
+
+    -   Biodiversity
+
+    -   Climate change / carbon
+
+-   Search
+
+    -   Pubmed
+
+    -   Semantic scholar
+
+    -   WoS
+
+    -   Grey literature
+
+-   PICO
+
+    -   
+
+### Design
+
+Before and after control impact (BACI) design [@christie2019]
+
+-   Time series
+
+-   Control groups
+
+-   Summary measures of diversity (as dependent variable?)
+
+    -   Richness
+
+    -   Diversity
+
+    -   Communities (permutations)
+
+-   Modelling with mixed-models (GLMMs)
+
+-   Issues
+
+    -   Data
+
+    -   Biases in occurrence data
+
+    -   Small size of TFs
+
+![Figure [@christie2019]](images/jpe13499-fig-0001-m.png){fig-align="center" width="7in"}
+
+### Analysis plan
+
+```{mermaid}
+%%| fig-width: 12
+flowchart TD
+    A[[Design]] --> B[Units of analysis]
+    B --> C[[Tiny forests N = 160]]
+    B --> D[[Allotments ?N = 160]]
+    C --> E{{1 km buffer}}
+    E --> G{{Descriptive analytics}}
+    E --> H{{Landuse/cover}}
+    E --> I{{Summary measures over time}}
+    D --> F{{1 km buffer, random sampling from 5 km buffer around TF}}
+    F --> J{{Descriptive analytics}}
+    F --> K{{Landuse/cover}}
+    F --> L{{Summary measures over time}}
+```
+
+## 
+
+### Data
+
+-   TF data
+
+    -   From TF website
+
+        -   Planting dates
+
+        -   Location
+
+        -   Tree mix
+
+        -   Size
+
+        -   Who is involved
+
+    -   Citizen science data
+
+        -   Insects / butterflies / pollinators
+
+        -   Tree tagging / tree density
+
+        -   Soil health
+
+        -   Flood risk
+
+        -   Carbon
+
+-   Spatial data from Google Earth Engine
+
+    -   Sentintel2 satellite generates near real-time (NRT) multispectral images at 10m resolution
+
+    -   These can be used to generate vegetation indices e.g. NDVI, which can be tracked over time
+
+    -   Sentinel2 images have been modelled to generate Dynamic World - a 10m resolution NRT land-use dataset
+
+-   Control groups
+
+    -   I propose to use 2 control groups:
+
+        -   allotments (from OS Greenspace datasets) ? random sample from location (NB overlap)
+
+        -   
+
+        -   
+
+    -   
+
+-   Biodiversity
+
+    -   Primary BD dataset will by NBN atlas occurrence data which is available by taxa, time and location
+
+    -   If necessary use
+
+    -   Earth Watch has provided examples of citizen science data collected for a number of existing
+
+### Analytical methods
+
+#### Descriptive analysis
+
+-   Characteristics of TF areas
+-   Summary of biodiversity
+-   Trends
+
+#### Biodiversity
+
+-   Species richness and diversity estimates by area and time in study and control groups
+
+### Modelling
+
+TBD
+
+## Project plan
+
+```{mermaid}
+%%| fig-width: 7
+gantt
+        dateFormat  DD-MM-YYYY
+        axisFormat  %d-%m-%Y
+        title Outline project plan
+        section MOD003371
+        Write up assignment       :active, des1, 01-04-2023,21-04-2023
+        Submit ethics             :active, 21-04-2023, 1d
+        Submit risk assessment    :active, 21-04-2023, 1d
+        section MOD002979 
+        Literature review         :active,  des2, 01-04-2023, 28d
+        Review & assemble data    :active,  des3, 01-04-2023, 56d
+        Analysis                  :         des4, after des3, 60d
+        Write up                  :         des5, after des4, 120d
+        Review, final edits.      :         des6, 21-10-2023, 20-12-2023
+        section Critical tasks
+        Submit MOD003371 assignment :crit, active, 21-04-2023,24h
+        Agree project outlines    :crit, done, after des1, 2d
+        Submit final project  MOD002979  :milestone, 31-12-2023, 1d
+        section Meetings
+        Supervisor                : des, 13-04-2023, 1d
+        Earth Watch               : des, 20-06-2023, 1d
+        
+
+
+```
+
+## References
