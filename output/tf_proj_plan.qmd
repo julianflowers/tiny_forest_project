@@ -35,7 +35,7 @@ execute:
 
 -   Urban restoration / nature based solutions
 
-### Tiny forests 
+### Tiny forests
 
 -   Tiny forest definition [@Ottburg2018-ls; @hunston]
 
@@ -65,14 +65,32 @@ tfs_uk <- tfs_uk |>
   mutate(name = str_remove(stub, "\\d{2,3}-")) |>
   bind_cols(tfs_lat_long)
   
-
-ggmap::ggmap_credentials()
-
 p <- ggmap::get_googlemap(center = c(lon = tfs_lat_long$long[161], lat = tfs_lat_long$lat[161]), zoom = 6)
 
 ggmap(p) +
-  geom_jitter(aes(x = long, y = lat), data = tfs_lat_long, shape = "x")
+  geom_jitter(aes(x = long, y = lat, colour = plant_area), data = tfs_uk, shape = "x") +
+  theme_void()
 
+```
+
+#### Planting timeline
+
+```{r}
+tfs_uk |>
+  mutate(plant_date = lubridate::dmy(plant_date), 
+         index = 1) |>
+  ggplot(aes(plant_date, lat, colour = plant_area)) + 
+  geom_point() +
+  theme_minimal() +
+  scale_x_date(date_breaks = "3 months") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        #axis.text.y = element_blank(), 
+        #panel.grid = element_blank()) +
+  scale_colour_viridis_b() +
+  labs(y = "latitude", 
+       x = "", 
+       title = "TF planting dates, by area") +
+  theme(plot.title.position = "plot")
 ```
 
 ### Putative TF impacts

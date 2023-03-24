@@ -1,5 +1,9 @@
 ## load libraries
 
+library(needs)
+needs(rgee, tidyverse, reticulate, googleCloudStorageR, )
+
+
 library(rgee);library(tidyverse, quietly = TRUE);library(reticulate);library(raster);library(mapview);library(stars);library(RStoolbox);library(RColorBrewer);library(googleCloudStorageR)
 library(cptcity);library(pryr);library(rgdal);library(terra)
 
@@ -9,6 +13,7 @@ cpt
 reticulate::virtualenv_list()
 reticulate::virtualenv_remove("rgee")
 reticulate::virtualenv_create("rgee")
+
 reticulate::use_virtualenv("rgee")
 reticulate::py_install("geemap", pip = TRUE, envname = "rgee")
 reticulate::py_install("geedim", pip = TRUE, envname = "rgee")
@@ -51,13 +56,13 @@ dataset1 <- ee$ImageCollection("GOOGLE/DYNAMICWORLD/V1")
 S2_clean <- function(img) {
   # Calculate the NDVI
   ndvi_values <- img$normalizedDifference(c("B8","B4"))
-  
+
   # Extract the quality band
   img_qa <- img$select("SCL")
-  
+
   # Create a mask considering: cloud shandows, medium&high clouds, cirrus
   cloud_mask <- img_qa$eq(list(3, 8, 9, 10))$reduce(ee$Reducer$sum())$gt(0)
-  
+
   # Mask pixels with value zero.
   ndvi_values %>%
     ee$Image$updateMask(cloud_mask) %>%
@@ -81,13 +86,13 @@ Map$addLayer(
   visParams = list(
     min = -0.4 ,
     max = 0.9 ,
-    palette = brewer.pal("RdYlGn", n = 9), 
+    palette = brewer.pal("RdYlGn", n = 9),
     opacity = 0.7
   ))
 
 
 ## export images to google drive
-geemap$ee_export_image_collection(s2_ndvi, out_dir = "/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive", 
+geemap$ee_export_image_collection(s2_ndvi, out_dir = "/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive",
                                     region = EE_geom, crs = "EPSG:4326", scale = 10)
 
 ## set drive
@@ -108,18 +113,18 @@ st <- map(tifs, ~(raster(.x, band = 17)))
 ## stack rasters
 st1 <- stack(st)
 
-## function to calculate raster stats for ndvi 
+## function to calculate raster stats for ndvi
 calc_stats <- function(f){
-  
+
   require(raster)
   r <- raster(f, band = 17)
   mean = cellStats(r, stat = "mean")
   max = cellStats(r, stat = "max")
   min = cellStats(r, stat = "min")
   sd = cellStats(r, stat = "sd")
-  
+
   out <- list(mean = mean, min = min, max = max, sd = sd)
-  
+
 }
 
 ## test
@@ -135,7 +140,7 @@ ndvi_stats <- map(tifs, calc_stats)
 ndvi_stats <- enframe(ndvi_stats) |>
   unnest(value) |>
   mutate(stats = rep(c("mean", "max", "min", "sd"), 164)) |>
-  unnest("value")  
+  unnest("value")
 
 ## calculate quantiles
 
@@ -145,18 +150,18 @@ quants <- ndvi_stats |>
 
 
 ## create classication matrix
-matrix <- c(0, quants$q[1], 1, 
-            quants$q[1], quants$q[2], 2, 
-            quants$q[2], quants$q[3], 3, 
-            quants$q[3], quants$q[4], 4, 
+matrix <- c(0, quants$q[1], 1,
+            quants$q[1], quants$q[2], 2,
+            quants$q[2], quants$q[3], 3,
+            quants$q[3], quants$q[4], 4,
             quants$q[4], Inf, 5
-            
+
 )
 
 
 m <- matrix(matrix, ncol = 3, byrow = TRUE)
 
-## reclassify 
+## reclassify
 st3 <- reclassify(st1, m)
 
 ## plot
@@ -164,7 +169,7 @@ plot(st3$layer.102, col = brewer.pal("PRGn", n = 5))
 
 mapview(st3$layer.111, col.region = brewer.pal("PRGn", n = 5))
 
- 
+
 ## dynamic world
 
 dw_pal <- c("#419BDF", "#397D49", "#88B053", "#7A87C6", "#E49635", "#DFC35A", "#C4281B", "#A59B8F", "#B39FE1")
@@ -177,7 +182,7 @@ dates <- rgee::ee_get_date_ic(dw)
 months <- dates |>
   mutate(monyear = zoo::as.yearmon(time_start))
 
-geemap$ee_export_image_collection(dw, out_dir = "/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive/dw", 
+geemap$ee_export_image_collection(dw, out_dir = "/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive/dw",
                                   region = EE_geom, crs = "EPSG:27700", scale = 10)
 
 dw_path <- here("/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive/dw")
@@ -219,7 +224,7 @@ dw_df_long_dt[value != 0, .N, by = .(x, y, value)][, max := max(N), by = .(x, y)
   geom_sf(aes(colour = factor(value)), shape = 15) +
   viridis::scale_color_viridis(discrete = TRUE, option = "turbo", direction = -1) +
   coord_sf()
-  
+
 
 dw_df_long |>
   arrange(variable)
@@ -229,7 +234,7 @@ p <- ggplot() +
   facet_wrap(~variable)
 
 calc_mode <- function(x){
-  
+
   uniqv <- unique(x)
   uniqv[which.max(tabulate(match(x, uniqv)))]
 

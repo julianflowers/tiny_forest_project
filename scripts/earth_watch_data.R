@@ -2,12 +2,12 @@
 
 
 ## load libraries
-library(pacman)
-p_load(tidyverse, here, janitor, units, sf, mapview)
+library(needs)
+needs(tidyverse, here, janitor, units, sf, mapview)
 library(tidyverse, warn.conflicts = TRUE)
 
 ## load scraped tiny forest details (101 tfs)
-tf <- read_csv("tiny_forests.csv")
+tf <- read_csv("data/tf-data-1.csv")
 
 
 ## pivot wider to split out total area and classroom area
@@ -21,14 +21,14 @@ tf_details <- tf_details |>
 ## tf area distribution
 
 tf_details |>
-  mutate(area = units::set_units(area, m2), 
+  mutate(area = units::set_units(area, m2),
          class = units::set_units(area, m2)) |>
   ggplot() +
   geom_density(aes(area)) +
   labs(title = "Tiny forest areas (N = 101)") +
   theme(plot.title.position = "plot")
-  
-## tf map 
+
+## tf map
 
 uk <- map_data(map = "world", region = "UK")
 
@@ -48,11 +48,11 @@ tf_details_sf |>
   #st_transform(27700) |>
   ggplot() +
   ggspatial::annotation_map_tile(zoomin = 3) +
-  #geom_sf(data = uk_bound, size = 0.2) 
+  #geom_sf(data = uk_bound, size = 0.2)
   geom_sf(aes(colour = area)) +
   coord_sf(crs = 27700) +
   viridis::scale_colour_viridis(direction = -1, option = "viridis") +
-    theme_void() 
+    theme_void()
 
 
 
@@ -60,11 +60,11 @@ tf_details_sf |>
 
 ## earth watch files
 
-p <- here("/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers12@gmail.com/My Drive/dissertation/FW_ MSc project and Tiny Forests")
+p <- here("data")
 
 f <- list.files(p, "csv", full.names = T)
 
-csvs <- map(f, read_csv)
+csvs <- map(f, data.table::fread)
 
 csvs <- map(csvs, janitor::clean_names) ## convert variable names to lower snake case
 
@@ -91,12 +91,12 @@ trees_per_tf |>
 tf_details <- tf_details |>
   full_join(tree_data, by = c("id" = "tiny_forest_id")) |>
   group_by(id) |>
-  mutate(n_trees = sum(species_quantity), 
-            area = area, 
-            tree_density = units::set_units(n_trees / area, m2), 
+  mutate(n_trees = sum(species_quantity),
+            area = area,
+            tree_density = units::set_units(n_trees / area, m2),
          n_species = n_distinct(species_name)
          ) |>
-  distinct() 
+  distinct()
 
 ## tree counts wide data and save as csv
 
@@ -121,7 +121,7 @@ tree_data |>
   geom_tile(aes(fct_reorder(tiny_forest_name.x, -tiny_forest_id), fct_reorder(species_name.x, -tot_trees), fill = species_quantity.x)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   coord_flip() +
-  labs(x = "", 
+  labs(x = "",
        y = "") +
   scale_fill_distiller(name = "Count", direction = 1)
 
@@ -143,11 +143,11 @@ carbon <- csvs[[3]] |>
 
 carbon_stats <- carbon |>
   group_by(species_name) |>
-  summarise(mean_height = mean(species_height_cm, na.rm = TRUE), 
-            sd = sd(species_height_cm, na.rm = TRUE), 
-            n = n(), 
-            se = sd / sqrt(n), 
-            mean_stem = mean(stem_1_ddh_mm, na.rm = TRUE), 
+  summarise(mean_height = mean(species_height_cm, na.rm = TRUE),
+            sd = sd(species_height_cm, na.rm = TRUE),
+            n = n(),
+            se = sd / sqrt(n),
+            mean_stem = mean(stem_1_ddh_mm, na.rm = TRUE),
             se_stem = sd(stem_1_ddh_mm, na.rm = TRUE) / sqrt(n))
 
 carbon |>
@@ -156,7 +156,7 @@ carbon |>
   ggplot() +
   geom_boxplot(aes(fct_reorder(species_name, median), species_height_cm)) +
   coord_flip() +
-  labs(x= "", 
+  labs(x= "",
        title = "Variation in tree heights by species") +
   theme(plot.title.position = "plot")
 
@@ -181,13 +181,13 @@ p1 <- here("/Users/julianflowers/Library/CloudStorage/GoogleDrive-julian.flowers
 
 files <- list.files(p1, "csv", full.names = TRUE)
 
-pollinator_csv <- map_dfr(files, read_csv) 
+pollinator_csv <- map_dfr(files, read_csv)
 
 map(test, colnames)
 
 pollinator_csv <- pollinator_csv |>
-  dplyr::select(country, location_code:year, contains("habitat"), 
-                contains("target_"), contains("floral_unit"), 
+  dplyr::select(country, location_code:year, contains("habitat"),
+                contains("target_"), contains("floral_unit"),
                 bumblebees:all_insects_total)
 
 
@@ -220,7 +220,7 @@ poll_map <- grids[[3]] |>
 poll_map <- poll_map |>
   filter(!is.na(country))
 
-poll_map |> 
+poll_map |>
   ggplot() +
   geom_sf(data = uk_bounds) +
   geom_sf(aes(fill = all_insects_total))
@@ -279,7 +279,7 @@ csvs[[6]] |>
   theme(axis.text.x.bottom = element_text(angle = 45, hjust = 1)) +
   labs(x = "", y = "") +
   scale_fill_viridis_c(direction = -1)
-  
+
 csvs[[5]] |>
   arrange(tiny_forest_id) |>
   dplyr::select(soil_compaction)
@@ -301,4 +301,3 @@ csvs[[8]] |>
   distinct() |>
   print(n = 148)
   filter(depth == "Surface")
-         

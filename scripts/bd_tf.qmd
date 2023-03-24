@@ -61,10 +61,14 @@ get_planting_info <- function(link){
   html_nodes(".uk-padding-remove-top") |>
   html_text2()
 }
+```
 
+
+```{r}
 tf_links <- tf_links |>
   mutate(planting_info = map(url, get_planting_info)) |>
   unnest("planting_info")
+
 
 tf_links <- tf_links |>
   mutate(plant = str_split(planting_info, "\\n")) |>
@@ -83,6 +87,9 @@ tf_details <- tf_links |>
          id = parse_number(stub), 
          plant_area = parse_number(plant_area), 
          plant_area = units::set_units(plant_area, "m^2"))
+
+tf_details |>
+  write_csv("tf_detail.csv")
 ```
 
 ```{r}
@@ -112,7 +119,7 @@ tfs_sf <- bind_cols(tfs_sf, tf_details)
 tfs_sf |> write_sf("tfs_sf.shp")
 
 tfs_lat_longs |>
-  write_csv("tf_lat_long.csv")
+  write_csv("tf_lat_long_1.csv")
 
 mapview(tfs_sf, col.regions = tfs_sf$plant_area)
 ```
