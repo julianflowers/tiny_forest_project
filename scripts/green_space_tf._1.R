@@ -43,7 +43,9 @@ tf_data_buff <- st_buffer(tf_data_sf, 1000) |>
   st_transform(27700)
 
 tf_data_buff |>
-  mapview()
+  mutate(area = st_area(tf_data_buff),
+         mean_area = mean(area) )
+
 
 st_crs(allotments)
 ol <- st_contains(y = st_centroid(allotments), tf_data_buff)
@@ -52,10 +54,39 @@ inter <-st_intersection(tf_data_buff, allotments) ## overlap between tf buffer a
 
 wood <- st_intersection(tf_data_buff, woodland_data)
 
+gs_buff <- select(inter, who:tfid, type = function.) |>
+  bind_rows(select(wood, who:tfid, type = MainHabs))
+
+gs_area <- gs_buff |>
+  mutate(area = units::set_units(st_area(gs_buff), m2)) |>
+  group_by(tfid) |>
+  mutate(tot_area = sum(area),
+         age = today() - when)
+
+gs_area |>
+  ggplot() +
+  geom_density(aes(log(units::drop_units(area))), fill = "red", colour = "black", binwidth = 1.1)
+
+gs_wide <- gs_area |>
+  st_drop_geometry() |>
+  group_by(tfid, type) |>
+  summarise(total_area = sum(area)) |>
+  mutate(total_area = units::drop_units(total_area)) |>
+  pivot_wider(names_from = "type", values_from = "total_area", values_fn = sum, values_fill = 0)
+
+gs_age <- select(gs_area, tfid, age, when, ) |>
+  st_drop_geometry() |>
+  distinct()
+
+gs_wide |>
+  left_join(gs_age) |>
+  janitor::clean_names()
+
 wood |>
-  mapview() +
+  mapview(col.regions = "darkgreen") +
   mapview(tf_data_buff) +
-  mapview(inter)
+  mapview(inter, col.regions = "brown") +
+  mapview(tf_data_sf, col.regions = "black")
 
 inter |>
   group_by(tfid, function.) |>
