@@ -53,6 +53,34 @@ summary(poll_df_mod_glmm)
 glmer(poll_sn ~ gs + age_at_survey + rain + wind + cloud + flower_quantity + (1|id), data = poll_df, family = "poisson") |>
   summary()
 
+### permanova
+
+ad_1 <- adonis2(poll_species ~ gs + age_at_survey, method = "bray", data = poll_df, permutations = 9999
+                , parallel = 4)
+
+class(ad_1)
+
+str(ad_1)
 
 
+### nmds
 
+nmds.2d <- metaMDS(poll_species, distance = "bray", k=2, noshare = TRUE,
+                        trymax=250, engine = c("monoMDS"), plot=FALSE, autotransform = FALSE)
+
+nmds.2d$points
+scrs.2d <- as.data.frame(nmds.2d$points)
+
+scrs.2d <- cbind(scrs.2d, cov = poll_cov)
+scrs.2d
+
+scrs.2d |>
+  ggplot() +
+  geom_point(aes(MDS1, MDS2, colour = as.numeric(cov.gs), size = as.numeric(cov.age_at_survey))) +
+  scale_color_viridis_c()
+
+### dbstats
+
+library(dbstats)
+
+dbstats::dbglm()
