@@ -3,16 +3,16 @@ title: "Study tour E011"
 author: 'SID: 2050507'
 date: "`r Sys.Date()`"
 output:
-  word_document: default
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
+  word_document: default
 bibliography: references.bib
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-devtools::install_github("benmarwick/wordcountaddin",  type = "source", dependencies = TRUE)1
+
 ```
 
 <https://earth.google.com/earth/d/1x9tUInzkKxO3WleaMHIMv31jXNK72c6L?usp=sharing>
@@ -65,4 +65,18 @@ Photo credits: Google Images
 
 Climate warming can have differential effects on the timing of seasonal natural events. Wytham Woods in Oxfordshire is the site of long term studies of the relationship between first leafing in oak trees and nesting
 
+![Ancient oak in Wytham Woods](images/old_man_of_wytham.jpeg){width="292"}
+
+![Great tits depend on oaks](images/download.jpeg)
+
 @cole2021
+
+## Poleward movement of dragonflies
+
+Ecological effects of climate change are not necessarily all negative. Many
+
+![New arrival in the UK. Willow emerald damselfly](images/willow-emerald-damselfly.jpeg)
+
+[@olsen2022]
+
+Photo credit: Dave Smallshire
