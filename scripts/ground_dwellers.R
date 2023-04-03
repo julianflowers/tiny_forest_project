@@ -8,7 +8,7 @@ p <- here("data")
 
 f <- list.files(p, "csv", full.names = T)
 
-csvs <- map(f, data.table::fread)
+csvs <- map(f, read_csv)
 
 csvs <- map(csvs, janitor::clean_names) ## convert variable names to lower snake case
 

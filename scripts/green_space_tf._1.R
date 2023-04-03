@@ -78,9 +78,17 @@ gs_age <- select(gs_area, tfid, age, when, ) |>
   st_drop_geometry() |>
   distinct()
 
-gs_wide |>
+gs_wide <- gs_wide |>
   left_join(gs_age) |>
   janitor::clean_names()
+
+gs_wide |>
+  write_csv("tf_gs.csv")
+
+gs_wide |>
+  mutate(gs_area = deciduous_woodland + public_park_or_garden + allotments_or_community_growing_spaces) +
+  ggplot() +
+  geom_col(aes)
 
 wood |>
   mapview(col.regions = "darkgreen") +
