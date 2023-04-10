@@ -1,17 +1,62 @@
 needs(tidyverse, vegan)
 path <- here::here()
 source(paste0(path, "/scripts/nbn_buffer.R"))
-tfLL <- read_csv(paste0(path, "/data/tf_lat_long.csv"))
+tfLL <- read_csv("https://github.com/julianflowers/tiny_forest_project/blob/main/data/tf_w_1.csv?raw=TRUE")
 tfLL <- tfLL[-54,]
 
 safe_buff <- safely(get_nbn_buffer)
 
-nbn_bd_data_3 <- purrr::map(93:100, ~(safe_buff(tfLL$long[.x], tfLL$lat[.x], n = 30000)))
 
-nbn_data_final <- map(nbn_bd_data, "result")
+nbn_bd_data_5 <- purrr::map(1:50, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
 
-map(nbn_bd_data_3, "result")
-nbn_bd_data
+nbn_bd_data_4 <- purrr::map(51:120, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+
+nbn_bd_data_3 <- purrr::map(121:176, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+
+
+nbn_data_final <- map(c(nbn_bd_data_5, nbn_bd_data_4, nbn_bd_data_3),  "result")
+
+nbn_data_final <- nbn_data_final[1:175]
+
+n <- pluck(tfLL, "stub")
+
+nbn_data_final <- nbn_data_final[-c(124, 151, 154:158)]
+
+length(nbn_data_final)
+
+nbn_data_final <- setNames(nbn_data_final, n[-c(124, 151, 154:158)])
+
+
+map(nbn_data_final, is.null)
+
+nbn_data_final <- map_dfr(1:168, ~(nbn_data_final[[.x]] |> mutate(tf = names(nbn_data_final[.x]))))
+
+nbn_data_final <- nbn_data_final |>
+  select(kingdom:tf)
+
+nbn_data_final |>
+  write_csv("nbn_tf_data.csv")
+
+nbn_data_recent <- nbn_data_final |>
+  filter(between(year, 2010, 2023))
+
+nbn_data_recent |>
+  count(tf, year, classs) |>
+  ggplot() +
+  geom_histogram(aes(n, fill = classs)) +
+  facet_wrap(~year + classs)
+  ggplot(aes(reorder(tf, n), n)) +
+  geom_col() +
+  ggthemes::theme_base() +
+  theme(plot.background = element_blank()) +
+  coord_flip()
+
+nbn_data_recent |>
+  count(year) |>
+  ggplot(aes(year, n)) +
+  geom_col() +
+  ggthemes::theme_base() +
+  theme(plot.background = element_blank())
 
 nbn_bd_data[[1]]$result |>
   count(classs, year) |>

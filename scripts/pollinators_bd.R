@@ -79,6 +79,9 @@ scrs.2d |>
   geom_point(aes(MDS1, MDS2, colour = as.numeric(cov.gs), size = as.numeric(cov.age_at_survey))) +
   scale_color_viridis_c()
 
+ggplot(data = poll_cov) +
+  geom_point(aes(gs, as.numeric(age_at_survey)))
+
 ### dbstats
 
 library(dbstats)
