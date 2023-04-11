@@ -3,7 +3,7 @@
 library(needs)
 needs(tidyverse, sf, mapview, vegan, rvest, myScrapers, here, ggmap, fontawesome)
 
-fontawesome::fa-
+
 
 ## tfs
 

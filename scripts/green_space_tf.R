@@ -1,15 +1,52 @@
 ## create linked greenspace and tiny forest data
 
-needs(sf, tidyverse, here, mapview)
+needs(sf, tidyverse, here, mapview, data.table, ggmap, tmap)
+
+map_data(worldMapEnv)
+
+ggmap::register_google(key = "AIzaSyBhAWbDyKX2chM2Jz0ZV22uT_8qN7YKL3Q")
 
 here()
 
 ## process green space data and extract allotments / parks
 gs_path <- "/Users/julianflowers/Dropbox/My Mac (Julians-MBP-2)/Downloads/OS Open Greenspace (GPKG) GB/data"
+gs_file <- "/Users/julianflowers/Dropbox/My Mac (Julians-MBP-2)/Downloads/Priority_Habitats_Inventory_England_2210546699479199036.gpkg"
+
 
 gf <- list.files(gs_path, "gpkg", full.names = TRUE)
 
-gs_data <- read_sf(gf[1], layer = "GreenspaceSite")
+gs_data <- read_sf(gf[1], layer = "GreenspaceSite") |>
+  st_transform(4326)
+
+f_data <- st_read(gs_file)
+
+
+uk.maps <- map_data("world", region = "UK")
+
+uk.maps |>
+  ggplot(aes(x = long, y = lat)) +
+  geom_polygon(aes(group = group, fill = region)) +
+  geom_point(data = tf_data, aes(x = lon, y = lat)) +
+  theme_void()
+
+
+
+
+
+
+
+
+head(f_data)
+
+setDT(f_data)[, .N, by = (MainHabs)]
+
+woodland <- f_data |>
+  filter(str_detect(MainHabs, "Decid")) |>
+  st_transform(crs = 4326)
+
+
+
+woodland_sample <- sample_frac(woodland, 0.1)
 
 allotments <- gs_data |>
   filter(str_detect(`function`, "Allotment|Park"))
@@ -21,24 +58,14 @@ allotments <- allotments |>
 
 ## tidy forest sf data
 
-tf_data <- read_csv("data/tf_detail.csv")
-tf_data
-tf_ll <- read_csv("data/tf_lat_long.csv") |>
-  mutate(title = str_remove_all(title, '\"'))
+tf_data <- read_csv("data/tf_w_1.csv")
 
-## remove mismatches
-tf_data <- tf_data |>
-  slice(-c(58, 59, 165, 167, 172, 174, 175, 178, 179))
-
-
-tf_ll <- tf_ll |>
-  slice(-c(171:177))
 
 ## create sf
 
 tf_data_sf <- tf_data |>
-  bind_cols(tf_ll) |>
-  st_as_sf(coords = c("long", "lat"), crs = 4326)
+  st_as_sf(coords = c("lon", "lat"), crs = 3426) |>
+  st_transform(4326)
 
 tf_data_sf |>
   ggplot() +
@@ -48,13 +75,29 @@ tf_data_sf |>
 
 write_sf(tf_data_sf, "data/tf_shp.shp")
 
-glimpse(tf_data_sf)
+tf_data_sf <- read_sf("data/tf_shp.shp")
 
-tf_data_buff <- st_buffer(tf_data_sf, 1000) |>
-  st_transform(27700)
+tf_data_buff <- st_buffer(tf_data_sf, 1000)
 
-st_crs(allotments)
-ol <- st_contains(y = st_centroid(allotments), tf_data_buff)
+st_crs(tf_data_sf)
+
+st_intersection(tf_data_buff, gs_data)
+
+st_crs(tf_data_buff)
+
+tf_wood <-st_intersection(tf_data_buff, woodland_sample)
+
+tmap::tm_shape(st_geometry(tf_data_buff)) +
+  tm_polygons(fill = "area")
+
+get_map(c(lon = -.1, lat = 54), zoom = 2) |>
+  ggmap() +
+  coord_sf(crs = st_crs(3857)) +
+  geom_sf(data = tf_data_buff, inherit.aes = FALSE, aes(colour = area) )
+
+
+
+
 
 centroids <- st_centroid(allotments)
 
@@ -70,9 +113,11 @@ allot_near_tf_long <- allot_near_tf |>
 ids <- pluck(allot_near_tf_long, "id") |>
   unique()
 
+st_geometry(tf_data_buff)
+
 allotments |>
   filter(id %in% ids) |>
   mapview() +
-  mapview(tf_data_buff, col.regions = "pink")
+  mapview(st_geomtf_data_buff, col.regions = "pink")
 
 
