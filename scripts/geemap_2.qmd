@@ -12,8 +12,10 @@ Quarto enables you to weave together content and executable code into a finished
 
 ```{r}
 #| cache: true
-library(rgee)
-library(reticulate)
+library(needs)
+
+needs(reticulate, tidyverse, rgee, raster, terra, mapview, stars, sf, prismatic, tidyrgee)
+
 reticulate::virtualenv_list()
 reticulate::virtualenv_remove("geemap")
 reticulate::virtualenv_create("geemap")
@@ -23,18 +25,23 @@ py_install("earthengine-api", envname = "geemap", pip = TRUE)
 py_install("geemap", envname = "geemap", pip = TRUE)
 py_install("IPython", pip = TRUE, envname = "geemap") #install the IPython package
 py_install("planet", pip = TRUE, envname = "geemap")
-#y_install("rasterio", pip = TRUE, envame = "geemap")
+py_install("plotly", pip = TRUE, envame = "geemap")
 py_install("ipyleaflet", pip = TRUE, envame = "geemap")
+py_install("geedim", pip = TRUE, envame = "geemap")
 
+
+Sys.setenv(RETICULATE_PYTHON = "/Users/julianflowers/.virtualenvs/geemap/bin/python") 
 
 ee <- import("ee")
 leaflet <- import("ipyleaflet")
-#rast <- import("rasterio")
+plotly <- import("plotly")
 planet <- import("planet")
 ipy <- import("IPython")
 geemap <- import("geemap")
 folium <- import("folium")
+
 os <- import("os")
+geedim <- import("geedim")
 
 
 ee$Authenticate()
@@ -44,38 +51,156 @@ ee$Authenticate()
 ```
 
 ```{r}
+library(rgee)
+ee_Initialize()
 
-geemap <- import("geemap")
+# Load an image.
+landsat <- ee$Image('LANDSAT/LC08/C01/T1_TOA/LC08_044034_20140318')
 
-ee$Initialize()
+# Define the visualization parameters.
+vizParams <- list(
+  bands = c('B5', 'B4', 'B3'),
+  min = 0,
+  max = 0.5,
+  gamma = c(0.95, 1.1, 1)
+)
 
-
-Map = ee$Map
-gee <- geemap$foliumap
-plotly <- geemap$plotlymap
-
-
-
-geemap$basemaps$OpenStreetMap.BlackAndWhite
-
+# Center the map and display the image.
+Map$setCenter(lon = -122.1899, lat = 37.5010, zoom = 10) # San Francisco Bay
+Map$addLayer(landsat, vizParams, 'false color composite')
 ```
-
-### PLANET
 
 ```{r}
 
-tile_format = "ipyleaflet"
+geemap <- import("geemap")
 
-tiles <- geemap$planet_monthly_tiles(api_key = "PLAK6dc7ecf494e447c08fcf08fd1cc16f99", tile_format = tile_format)
+rgee::ee_Initialize(user = "julian.flowers12@gmail.com", drive = TRUE, gcs = TRUE)
 
-ts <- geemap$ts_inspector(tiles)
 
-ts
+rgee::Map
 
-m = geemap$Map()
 
-m$add_planet_by_month(year=2020, month=8, api_key = "PLAK6dc7ecf494e447c08fcf08fd1cc16f99")
-m
+
+```
+
+```{r}
+
+here::here()
+
+df <- read_csv("../data/tf_w_1.csv")                    ## import tf data
+
+s2 <- ee$ImageCollection("COPERNICUS/S2_SR_HARMONIZED") ## import image collection
+
+id <- 86
+
+start_date <- "2019-01-01"                            
+end_date <- "2023-03-01"
+
+tf_pd <- df |>
+  filter(tfid == id) |>
+  pluck("when") |>
+  as.character()
+
+lat <- df |>
+  filter(tfid == id) |>
+  pluck("lat")
+
+lon <- df |>
+  filter(tfid == id) |>
+  pluck("lon")
+
+## Point and buffer
+point <- ee$Geometry$Point(lon, lat)$buffer(100)
+point$getInfo()
+tf <- ee$Geometry$Point(lon, lat)$buffer(1000)
+
+
+## Map
+Map$centerObject(tf)
+Map$addLayer(tf, name = "Buffer") +
+  Map$addLayer(point, name = "Loc")
+
+## Filter image collection
+
+s2b <- s2$filterBounds(point)
+s2_pre <- s2b$filterDate(start_date, opt_end = tf_pd)
+s2_post <- s2b$filterDate(tf_pd, end_date)
+s2_pre <- s2_pre$filter(ee$Filter$lt("CLOUDY_PIXEL_PERCENTAGE", 10))
+s2_post <- s2_post$filter(ee$Filter$lt("CLOUDY_PIXEL_PERCENTAGE", 10))
+
+# s2_tidy <- tidyrgee::as_tidyee(s2)
+# 
+# s2_tidy$vrt |>
+#   unnest("band_names")
+# 
+# nrow(s2_tidy$vrt) 
+# 
+# s2_tidy$vrt |>
+#   count(date) |>
+#   ggplot(aes(date, n)) +
+#   geom_point()
+
+s2_pre$size()$getInfo()
+
+
+s2_c <- s2_pre$median()$clip(tf)
+s21_c <- s2_post$median()$clip(tf)
+
+visParams <- list(bands = c("B5", "B4", "B3"), min = 0, max = 3000)
+
+Map$addLayer(s2_c, visParams) | Map$addLayer(s21_c, visParams)
+
+
+```
+
+
+
+```{r}
+
+i <- 155
+
+s2_tidy$vrt[i, ]$date
+
+visParams <- list(bands = c("B5", "B4", "B3"), min = 0, max = 3000)
+
+Map$addLayer(ee$Image(s2_tidy$vrt$id[i])$clip(five_trees), visParams = visParams, name = s2_tidy$vrt |> slice(i) |> select(date)) 
+
+Map$addLayer(ee$Image(s2_tidy$vrt$id[i])$clip(point), visParams = visParams)
+
+
+
+```
+
+
+
+
+```{r}
+
+images <- here::here("images")
+
+x <- list.files(images, "tif", full.names = TRUE)
+
+x1 <- stack(x[1]) 
+
+x1_df <- as.data.frame(x1, xy = TRUE) |>
+  drop_na()
+ 
+x1_df <- x1_df |>
+  rename(Red = B4, Green = B3, Blue = B2)
+
+prismatic::color(rgb(r = Red,              #Specify Bands
+                     g = Green,
+                     b = Blue,
+                     maxColorValue = 255)[1:200])
+
+ggplot(data = x1_df, aes(x = x, y =y)) +                   #plot map
+  geom_raster(fill = rgb(Red = red,
+                         Green = green,
+                         Blue = blue,
+                         maxColorValue = 255)) +
+  scale_fill_identity()
+
+
 
 
 ```

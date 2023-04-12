@@ -1,7 +1,7 @@
 ## load libraries
 
 library(needs)
-needs(rgee, tidyverse, reticulate, googleCloudStorageR, )
+needs(rgee, tidyverse, reticulate, googleCloudStorageR)
 
 
 library(rgee);library(tidyverse, quietly = TRUE);library(reticulate);library(raster);library(mapview);library(stars);library(RStoolbox);library(RColorBrewer);library(googleCloudStorageR)
@@ -18,7 +18,7 @@ reticulate::use_virtualenv("rgee")
 reticulate::py_install("geemap", pip = TRUE, envname = "rgee")
 reticulate::py_install("geedim", pip = TRUE, envname = "rgee")
 
-reticulate::use_python('/Users/julianflowers/.virtualenvs/geemap/bin/python')
+Sys.setenv(RETICULATE_PYTHON = '/Users/julianflowers/.virtualenvs/rgee/bin/python')
 
 ## import python modules
 import("ee")
@@ -38,7 +38,7 @@ ee_utils_sak_validate()
 EE_geom <- ee$Geometry$Point(c(-1.215472, 51.769139))$buffer(2000)
 start <- "2019-01-01"
 end <- "2023-01-01"
-ccover <- 35
+ccover <-
 
 
 ## image collection filters
@@ -86,7 +86,7 @@ Map$addLayer(
   visParams = list(
     min = -0.4 ,
     max = 0.9 ,
-    palette = brewer.pal("RdYlGn", n = 9),
+    palette = RColorBrewer::brewer.pal("RdYlGn", n = 9),
     opacity = 0.7
   ))
 
