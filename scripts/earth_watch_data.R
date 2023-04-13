@@ -1,63 +1,5 @@
 ## explore tiny forest data
 
-
-## load libraries
-library(needs)
-needs(tidyverse, here, janitor, units, sf, mapview)
-library(tidyverse, warn.conflicts = TRUE)
-
-## load scraped tiny forest details (101 tfs)
-tf <- read_csv("data/tf-data-1.csv")
-
-
-## pivot wider to split out total area and classroom area
-tf_details <- dplyr::select(tf, id:lon)
-tf_details <- tf_details |>
-  group_by(id) |>
-  mutate(row_id = row_number()) |>
-  pivot_wider(names_from = "row_id", names_prefix = "area", values_from = "area") |>
-  rename(area = area1, class_area = area2)
-
-## tf area distribution
-
-tf_details |>
-  mutate(area = units::set_units(area, m2),
-         class = units::set_units(area, m2)) |>
-  ggplot() +
-  geom_density(aes(area)) +
-  labs(title = "Tiny forest areas (N = 101)") +
-  theme(plot.title.position = "plot")
-
-## tf map
-
-uk <- map_data(map = "world", region = "UK")
-
-
-uk_sf <- st_as_sf(uk, coords = c("long", "lat"), crs = 4326)
-
-tf_details_sf <- st_as_sf(tf_details, coords = c("lon" ,"lat"), crs = 4326)
-
-
-## interactive
-tf_details_sf |>
-  mapview(col.regions = tf_details_sf$area)
-
-
-## static
-tf_details_sf |>
-  #st_transform(27700) |>
-  ggplot() +
-  ggspatial::annotation_map_tile(zoomin = 3) +
-  #geom_sf(data = uk_bound, size = 0.2)
-  geom_sf(aes(colour = area)) +
-  coord_sf(crs = 27700) +
-  viridis::scale_colour_viridis(direction = -1, option = "viridis") +
-    theme_void()
-
-
-
-
-
 ## earth watch files
 
 p <- here("data")
@@ -73,30 +15,144 @@ csvs <- map(csvs, janitor::remove_empty) ## remove empty rows
 basenames <- map(f, basename)
 
 
+## load libraries
+library(needs)
+needs(tidyverse, here, janitor, units, sf, mapview)
+library(tidyverse, warn.conflicts = TRUE)
+
+## load scraped tiny forest details (176 tfs)
+tf <- read_csv("data/tf_w_2.csv")
+
+## woodland/ green space
+
+tf1 <- csvs[[31]] |>
+  left_join(tf, by = c("tfid"))
+
+## tf area distribution
+
+tf |>
+  ggplot() +
+  geom_density(aes(area)) +
+  labs(title = paste("Tiny forest areas (N = ", nrow(tf), ")")) +
+  ggthemes::theme_base() +
+  theme(plot.title.position = "plot")
+
+## tf map
+
+uk <- map_data(map = "world", region = "UK")
+
+
+uk_sf <- st_as_sf(uk, coords = c("long", "lat"), crs = 4326)
+
+tf_details_sf <- st_as_sf(tf, coords = c("lon" ,"lat"), crs = 4326)
+
+
+## interactive
+tf_details_sf |>
+  mapview(zcol = "area")
+
+ggplot(uk_sf) +
+  geom_sf() +
+  geom_sf(data = tf_details_sf, aes(color = factor(year))) +
+  scale_colour_viridis_d() +
+  coord_sf() +
+  ggthemes::theme_base()
+
+
+
 ## tree data
 
-tree_data <- csvs[[12]] |>
-  filter(tiny_forest_id !=84)
+library(vegan)
 
-trees_per_tf <- tree_data |>
-  group_by(tiny_forest_id) |>
-  summarise(n_trees = sum(species_quantity))
+tree_data <- read_csv("https://media.githubusercontent.com/media/julianflowers/tiny_forest_project/main/data/setup_tree_species_partial.csv") |>
+  filter(`Tiny Forest ID` !=84) |>
+  rename(tfid = `Tiny Forest ID`) |>
+  left_join(tf1)
 
-trees_per_tf |>
+tree_data |>
+  janitor::clean_names() |>
+  select(-c(species_id, species_name_latin)) |>
+  pivot_wider(names_from = "species_name", values_from = "species_quantity", values_fill = 0) |>
+  janitor::clean_names() -> tree_data_wide
+
+tree_data_species <- select(tree_data_wide, apple_crab:last_col()) |>
+  drop_na()
+
+tree_data_covars <- select(tree_data_wide, tfid:year_month)
+
+sn <- specnumber(tree_data_species)
+div <- diversity(tree_data_species)
+
+ur <- tree_data_covars$rural_urban_classification_2011_10_fold
+
+
+tree_adonis <- adonis2(tree_data_species ~ ur, na.action = na.omit, permutations = 9999, parallel = 4)
+
+tree_adonis
+
+plot(rda(tree_data_species))
+
+tree_mds <- metaMDS(tree_data_species, distance = "bray", k=2, noshare = TRUE,
+        trymax=250, engine = c("monoMDS"), plot=FALSE, autotransform = FALSE)
+
+
+tree_mds
+
+
+scrs.2d <- as.data.frame(scores(tree_mds, display = "site")) |>
+  bind_cols(tree_data_covars)
+
+
+scrs.2d |>
+  drop_na() |>
   ggplot() +
-  geom_density(aes(n_trees))
+  geom_point(aes(NMDS1, NMDS2, colour = factor(rural_urban_classification_2011_10_fold), shape = factor(year), size = 1.5))
 
-## tree density
 
-tf_details <- tf_details |>
-  full_join(tree_data, by = c("id" = "tiny_forest_id")) |>
-  group_by(id) |>
-  mutate(n_trees = sum(species_quantity),
-            area = area,
-            tree_density = units::set_units(n_trees / area, m2),
-         n_species = n_distinct(species_name)
-         ) |>
-  distinct()
+u <- umap::umap(tree_data_species)
+
+u_clus <- dbscan::hdbscan(u$layout, minPts = 5)
+
+u$layout |>
+  bind_cols(tree_data_covars) |>
+  bind_cols(cluster = u_clus$cluster) |>
+  data.frame() |>
+  ggplot() +
+  geom_point(aes(...1, ...2, shape = factor(rural_urban_classification_2011_10_fold), colour = factor(cluster), size = 2))
+
+
+
+pairwise.adonis <- function(x, factors, sim.method, p.adjust.m)
+{
+  library(vegan)
+  set.seed(1)
+  factors <- factors
+  co = as.matrix(combn(unique(factors),2))
+  pairs = c()
+  F.Model =c()
+  R2 = c()
+  p.value = c()
+
+  for(elem in 1:ncol(co)){
+    ad = adonis(x[factors %in%
+                    c(as.character(co[1,1]),as.character(co[2,1])),] ~
+                  factors[factors %in%
+                            c(as.character(co[1,1]),as.character(co[2,1]))] , model =
+                  c("raw"), permutations = 999, method =sim.method, autotransform =
+                  FALSE);
+    pairs = c(pairs,paste(co[1,elem],'vs',co[2,elem]));
+    F.Model =c(F.Model,ad$aov.tab[1,4]);
+    R2 = c(R2,ad$aov.tab[1,5]);
+    p.value = c(p.value,ad$aov.tab[1,6])
+  }
+  p.adjusted = p.adjust(p.value,method=p.adjust.m)
+  pairw.res = data.frame(pairs,F.Model,R2,p.value,p.adjusted)
+  return(pairw.res)
+}
+
+pairwise.adonis(tree_data_species, ur, sim.method="bray", p.adjust.m
+                ='bonferroni')
+
 
 ## tree counts wide data and save as csv
 
