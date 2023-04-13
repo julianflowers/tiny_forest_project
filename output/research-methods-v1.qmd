@@ -45,11 +45,11 @@ Growth of urbanisation - Urban restoration / nature based solutions as a means o
 
 One recent approach to urban ecological restoration which is growing in popularity isthe development of Tiny Forests (TF)[^1]. These are defined as small scale (100 - 200 m^2^) densely planted woodlands, planted with a variety of native trees and understorey flora.
 
-The TF concept originated in the work of Akiro Miyawaki in Japan who applied ecological principles to forest regeneration as part of disaster recovery and prevention. His original ideas were adopted widely in South East Asia and now have spread west. The current approach in the UK is largely based in work in the Netherlands and is and proscribed by the Tiny Forest Handbook[@noauthorundated-zc; @hunston; @Ottburg2018-ls; @hunston; @noauthorundated-zca].
+The TF concept originated in the work of Akiro Miyawaki in Japan who applied ecological principles to forest regeneration as part of disaster recovery and prevention. His original ideas were adopted widely in South East Asia and now have spread west. The current approach in the UK is largely based in work in the Netherlands and is and proscribed by the Tiny Forest Handbook @noauthorundated-zc.
 
 ### Tiny forest development in UK
 
-The first TF in the UK was planted at Witney in Oxfordshire in 2020 and more than 160 have been planted since. Current locations are shown in the map.@ggmap
+The first TF in the UK was planted at Witney in Oxfordshire in 2020 and more than 160 have been planted since. Current locations are shown in the map.\@ggmap
 
 ```{r location-tiny-forest, fig.cap="Location of Tiny Forests at March 2023", fig.id=TRUE}
 
@@ -82,7 +82,7 @@ ggmap(p) +
 
 Preliminary literature review reveals very little research on the benefits or biodiversity impact of TFs to date. This is not surprising in a UK context given their relative novelty.
 
-However Earth Watch have published an annual report on the development of TFs in the UK and there is a report from the Netherlands.@Ottburg2018-ls
+However Earth Watch have published an annual report on the development of TFs in the UK and there is a report from the Netherlands.\@Ottburg2018-ls
 
 ## Aims and objectives of this research
 

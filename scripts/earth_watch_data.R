@@ -64,27 +64,35 @@ ggplot(uk_sf) +
 
 library(vegan)
 
-tree_data <- read_csv("https://media.githubusercontent.com/media/julianflowers/tiny_forest_project/main/data/setup_tree_species_partial.csv") |>
-  filter(`Tiny Forest ID` !=84) |>
-  rename(tfid = `Tiny Forest ID`) |>
-  left_join(tf1)
+tree_data <- read_csv('https://media.githubusercontent.com/media/julianflowers/tiny_forest_project/main/data/setup_tree_species_partial.csv')
+tree_data <- filter(tree_data, `Tiny Forest ID` != 84)
+tree_data <- rename(tree_data, tfid = `Tiny Forest ID`)
+tree_data <- left_join(tree_data, tf1)
 
-tree_data |>
-  janitor::clean_names() |>
-  select(-c(species_id, species_name_latin)) |>
-  pivot_wider(names_from = "species_name", values_from = "species_quantity", values_fill = 0) |>
-  janitor::clean_names() -> tree_data_wide
+tree_data_clean <- janitor::clean_names(tree_data)
+tree_data_wide <- tree_data_clean %>%
+  select(-c(species_id, species_name_latin)) %>%
+  pivot_wider(names_from = 'species_name', values_from = 'species_quantity', values_fill = 0) %>%
+  janitor::clean_names()
 
-tree_data_species <- select(tree_data_wide, apple_crab:last_col()) |>
+tree_data_species <- tree_data_wide %>%
+  select(apple_crab:last_col()) %>%
   drop_na()
 
-tree_data_covars <- select(tree_data_wide, tfid:year_month)
-
+tree_data_covars <- tree_data_wide %>%
+  select(tfid:year_month)
+#####
+####
 sn <- specnumber(tree_data_species)
 div <- diversity(tree_data_species)
 
 ur <- tree_data_covars$rural_urban_classification_2011_10_fold
 
+raup_crick <- vegan::raupcrick(tree_data_species)
+
+d <- vegdist(tree_data_species, "raup")
+
+plot(hclust(d))
 
 tree_adonis <- adonis2(tree_data_species ~ ur, na.action = na.omit, permutations = 9999, parallel = 4)
 

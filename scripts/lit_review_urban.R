@@ -10,15 +10,17 @@ forest_carbon <- 'Carbon OR Climate_Change OR Nature_Based_Solution$) AND
 q <- "Nature"
 
 search_woslite(api_key = "e4879094187828aa948bf61348587b8059f6814a", query = forest_carbon)
-                        
+
 library(myScrapers)
 
 ncbi_key = "bd86b3e3500c581cbc6ee0896f551bae0408"
-search <- "urban (forest OR nature based solution*[tw]) systematic[sb]"
+search <- "urban (forest OR nature based solution*[tw]) biodiversity"
 start = 2000
 end = 2023
 
-res <- pubmedAbstractR(search = search, start = start, end = end, ncbi_key = ncbi_key)
+res <- pubmedAbstractR(search = search, start = start, end = end, ncbi_key = ncbi_key, n = 100)
+
+res$abstracts$title
 
 res$abstracts[9,2] |>
   gt::gt()
@@ -53,7 +55,7 @@ cited_by <- map(details, "numCitedBy")
 citing <- map(details, "numCiting")
 refs <- map(details, "references")
 
-df <- data_frame(paperId, year, journal, titles, abstracts, 
+df <- data_frame(paperId, year, journal, titles, abstracts,
                  doi, refs, cited_by, citing) |>
   unnest("paperId") |>
   unnest("year") |>
@@ -67,13 +69,13 @@ df <- data_frame(paperId, year, journal, titles, abstracts,
   mutate(refs_ids = map(refs, "paperId")) |>
   unnest("refs_ids") |>
   mutate(det = map(refs_ids, S2_paper))
-  
+
 df |>
   View()
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
 
