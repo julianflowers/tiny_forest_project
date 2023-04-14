@@ -1,7 +1,8 @@
 ---
 title: "Tiny forest project plan"
+subtitle: "Submission for MOD0002205 E011"
 date: "`r format(Sys.Date(), '%B %d %Y')`"
-author: "Julian Flowers SID: 2050507"
+author: "SID: 2050507"
 institute: "Anglia Ruskin University"
 format: 
    html:
@@ -31,21 +32,21 @@ The importance of ecological and ecosystem restoration is increasingly recognise
 
 ## Introduction
 
+Britain is one of the least biodiverse countries in Europe @whywen.
+
 In 2021 we entered the UN Decade of Ecosystem Restoration (UNDECAD) which aims to stop ecosystem decline, in order to promote human welfare, tackle climate change and halt biodiversity collapse @undecad.
 
 The Resolution proposing UNDECAD emphasized the importance of habitat maintenance and restoration:
 
 > *"Emphasizing that forests, wetlands, drylands and other natural ecosystems are essential for sustainable development, poverty alleviation and improved human wellbeing"*
 
-Britain is one of the least biodiverse countries in Europe .
-
 Growth of urbanisation - Urban restoration / nature based solutions as a means of improving wellbeing, tackling biodiversity loss, carbon
 
 ### Tiny forests
 
-One recent approach to urban ecological restoration which is growing in popularity isthe development of Tiny Forests (TF)[^1]. These are defined as small scale (100 - 200 m^2^) densely planted woodlands, planted with a variety of native trees and understorey flora.
+One recent approach to urban ecological restoration which is growing in popularity is the development of Tiny Forests (TF)[^1]. These are defined as small scale (100 - 200 m^2^) densely planted woodlands, planted with a variety of native trees and understorey flora.
 
-The TF concept originated in the work of Akiro Miyawaki in Japan who applied ecological principles to forest regeneration as part of disaster recovery and prevention. His original ideas were adopted widely in South East Asia and now have spread west. The current approach in the UK is largely based in work in the Netherlands and is and proscribed by the Tiny Forest Handbook @noauthorundated-zc.
+The TF concept originated in the work of Akiro Miyawaki in Japan who applied ecological principles to forest regeneration as part of disaster recovery and mitigation[@Miyawaki1993-ji; @Miyawaki2004-di; @WOS:000078078300016]. His original ideas were adopted widely in South East Asia and now have spread west. The current approach in the UK is largely based in work in the Netherlands and is and proscribed by the Tiny Forest Handbook @noauthorundated-zc.
 
 ### Tiny forest development in UK
 
@@ -78,11 +79,69 @@ ggmap(p) +
 
 ```
 
-#### 
+```{css}
+.mermaid {
+  background-color: lightblue;
+  fill: green;
+  border: none;
+  padding: 15px;
+  border-radius: 5px;
+}
 
-Preliminary literature review reveals very little research on the benefits or biodiversity impact of TFs to date. This is not surprising in a UK context given their relative novelty.
+```
 
-However Earth Watch have published an annual report on the development of TFs in the UK and there is a report from the Netherlands.\@Ottburg2018-ls
+```{mermaid, theme: forest}
+%%| fig-width: 6
+
+graph LR
+    A[Tiny Forest research questions] 
+    B[Flood management]
+    C[Thermal comfort]
+    D[Biodiversity]
+    E[Carbon capture and storage]
+    F[Social and wellbeing benefits]
+    G[Annual carbon storage]
+    H[Variation across the network]
+    I[Water storage capacity]
+    J[Cooling effect?]
+    K[Connection to nature]
+    L[Social reach]
+    M[Invertebrate abundance]
+    N[Variaton between TFs]
+    style A fontSize:18px
+    
+    A --- B
+    A --- C
+    A --- D
+    E --- A 
+    F --- A
+    G -.- E
+    H -.- E
+    B -.- I
+    C -.- J
+    D -.- M
+    D -.- N
+    K -.- F
+    L -.- F 
+    
+    style B fill:#FFFFFF
+    style C fill:#FFFFFF
+    style D fill:#FFFFFF
+    style E fill:#FFFFFF
+    style F fill:#FFFFFF
+    
+
+```
+
+### Existing research
+
+Rapid preliminary literature review reveals very little research on the benefits or biodiversity impact of TFs to date. This is not surprising in a UK context given their relative novelty. Earth Watch published a snap shot of the performance of the UK Tiny Forest programme in 2022. Reporting on 359 biodiversity surveys focusing on butterflies, pollinators and ground-dwelling invertbrates, they found (excluding ants) woodlice were the predominant invertebrate, "other flies" the predominant pollinator, and small white the commonest butterfly. They found little variation between forests but there was some evidence of increase in richness of invertebrates over time @hunston.
+
+@Ottburg2018-ls conducted periodic surveys of birds frequency, flora and and soil fauna using a standardised methodology at two TFs in Zaanstad compared with two close by forested areas in order to assess whether TFs can bring biodiversity and whether citizen science (CS) can generate biodiversity overviews. The authors found that selected pollinators and soil invertebrates were more abundant in the TFs than controls, but they didn't perform any statistical analysis and the comparabiilty of control groups wasn't stated @Ottburg2018-ls.
+
+@cárdenas2022 outline research objectives for TFs including monitoring the seasonal and inter-forest variation in invertebrate richness and abundance, and relating it to the surrounding green infrastructure.
+
+### Measuring biodiversity
 
 ## Aims and objectives of this research
 
@@ -140,8 +199,8 @@ For each I propose to calculate an annual time series of biodiversity metrics - 
 ### Analysis plan
 
 ```{mermaid}
-%%| fig-width: 12
-flowchart TD
+%%| fig-width: 6
+flowchart LR
     A[[Design]] --> B[Units of analysis]
     B --> C[[Tiny forests N = 160]]
     B --> D[[Allotments ?N = 160]]
@@ -157,59 +216,19 @@ flowchart TD
 
 ### Data
 
--   TF data
+Proposed data sources and application
 
-    -   From TF website
+| Measure      | Source                                     | Analytical purpose                                                                  |
+|--------------|--------------------------------------------|-------------------------------------------------------------------------------------|
+| Biodiversity | NBN Atlas species occurrence data @nbnatla | Calculate species richness and diversity indices for buffer zones and control areas |
+|              | Earth Watch data                           | Calculate diversity indices for Tiny Forests                                        |
+| Tiny Forests | Earth Watch data                           | Features of TFs e.g. age, area, planting density and diversity                      |
+|              | Sentinel-2 (satellite data)                | Land-cover and vegetation indices                                                   |
+|              | OS                                         | Local greenspace                                                                    |
+|              | Natural England                            | Local woodland                                                                      |
+|              | ONS                                        | Urban rural classification, social deprivation scores                               |
 
-        -   Planting dates
-
-        -   Location
-
-        -   Tree mix
-
-        -   Size
-
-        -   Who is involved
-
-    -   Citizen science data
-
-        -   Insects / butterflies / pollinators
-
-        -   Tree tagging / tree density
-
-        -   Soil health
-
-        -   Flood risk
-
-        -   Carbon
-
--   Spatial data from Google Earth Engine
-
-    -   Sentinel2 satellite generates near real-time (NRT) multispectral images at 10m resolution
-
-    -   These can be used to generate vegetation indices e.g. NDVI, which can be tracked over time
-
-    -   Sentinel2 images have been modelled to generate Dynamic World - a 10m resolution NRT land-use dataset
-
--   Control groups
-
-    -   I propose to use 2 control groups:
-
-        -   allotments (from OS Greenspace datasets) ? random sample from location (NB overlap)
-
-        -   
-
-        -   
-
-    -   
-
--   Biodiversity
-
-    -   Primary BD dataset will by NBN atlas occurrence data which is available by taxa, time and location
-
-    -   If necessary use
-
-    -   Earth Watch has provided examples of citizen science data collected for a number of existing
+: Data sources and uses
 
 ### Analytical methods
 

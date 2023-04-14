@@ -251,6 +251,26 @@ flowchart TD
 
 ### Modelling
 
+```{mermaid}
+
+TD
+    A[R programming]
+    B[Data types]
+    C[Loops]
+    D[Functions]
+    E[Conditional statements]
+    F[Data visualization]
+    G[Packages]
+    H[Data manipulation]
+    A-->B
+    A-->C
+    A-->D
+    A-->E
+    A-->F
+    A-->G
+    A-->H
+```
+
 TBD
 
 ## Project plan

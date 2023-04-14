@@ -14,7 +14,11 @@ Quarto enables you to weave together content and executable code into a finished
 #| cache: true
 library(needs)
 
-needs(reticulate, tidyverse, rgee, raster, terra, mapview, stars, sf, prismatic, tidyrgee)
+remotes::install_github("r-earthengine/rgeeExtra")
+
+library(rgeeExtra)
+
+needs(reticulate, tidyverse, rgee, raster, terra, mapview, stars, sf, prismatic, tidyrgee, rgeeExtra)
 
 reticulate::virtualenv_list()
 reticulate::virtualenv_remove("geemap")
@@ -28,6 +32,8 @@ py_install("planet", pip = TRUE, envname = "geemap")
 py_install("plotly", pip = TRUE, envame = "geemap")
 py_install("ipyleaflet", pip = TRUE, envame = "geemap")
 py_install("geedim", pip = TRUE, envame = "geemap")
+py_install("eemont", pip = TRUE, envname = "geemap")
+py_install("ee_extra", pip = TRUE, envname = "geemap")
 
 
 Sys.setenv(RETICULATE_PYTHON = "/Users/julianflowers/.virtualenvs/geemap/bin/python") 
@@ -39,6 +45,7 @@ planet <- import("planet")
 ipy <- import("IPython")
 geemap <- import("geemap")
 folium <- import("folium")
+ee_extra <- import("ee_extra")
 
 os <- import("os")
 geedim <- import("geedim")
@@ -85,11 +92,17 @@ rgee::Map
 
 ```{r}
 
+import("ee_extra")
+import ("eemont")
+
+
 here::here()
 
 df <- read_csv("../data/tf_w_1.csv")                    ## import tf data
 
 s2 <- ee$ImageCollection("COPERNICUS/S2_SR_HARMONIZED") ## import image collection
+
+
 
 id <- 86
 
@@ -111,8 +124,11 @@ lon <- df |>
 
 ## Point and buffer
 point <- ee$Geometry$Point(lon, lat)$buffer(100)
-point$getInfo()
+
 tf <- ee$Geometry$Point(lon, lat)$buffer(1000)
+
+visParams <- list(bands = c("B5", "B4", "B3"), min = 0, max = 3000)
+
 
 
 ## Map
@@ -120,25 +136,29 @@ Map$centerObject(tf)
 Map$addLayer(tf, name = "Buffer") +
   Map$addLayer(point, name = "Loc")
 
+geemap$Map$add_time_slider(ee_object = s2, vis_params = visParams, region = tf, )
+
 ## Filter image collection
 
-s2b <- s2$filterBounds(point)
+s2b <- s2$filterBounds(tf)
 s2_pre <- s2b$filterDate(start_date, opt_end = tf_pd)
 s2_post <- s2b$filterDate(tf_pd, end_date)
 s2_pre <- s2_pre$filter(ee$Filter$lt("CLOUDY_PIXEL_PERCENTAGE", 10))
 s2_post <- s2_post$filter(ee$Filter$lt("CLOUDY_PIXEL_PERCENTAGE", 10))
 
-# s2_tidy <- tidyrgee::as_tidyee(s2)
-# 
-# s2_tidy$vrt |>
-#   unnest("band_names")
-# 
-# nrow(s2_tidy$vrt) 
-# 
-# s2_tidy$vrt |>
-#   count(date) |>
-#   ggplot(aes(date, n)) +
-#   geom_point()
+s2_pre <- s2_pre$maskClouds()
+
+## vegetation indices
+
+S2 <- s2_pre$scaleAndOffset()$spectralIndices(c('NDVI', 'NDSI', 'EVI'))
+
+N <- S2$select('B8')
+R <- S2$select('B4')
+B <- S2$select('B2')
+
+EVI = 2.5*(N-R)/(N+(6*R)-(7.5*B)+1)
+NDVI <- (N-R)/(N+R)
+
 
 s2_pre$size()$getInfo()
 
@@ -146,13 +166,39 @@ s2_pre$size()$getInfo()
 s2_c <- s2_pre$median()$clip(tf)
 s21_c <- s2_post$median()$clip(tf)
 
-visParams <- list(bands = c("B5", "B4", "B3"), min = 0, max = 3000)
 
 Map$addLayer(s2_c, visParams) | Map$addLayer(s21_c, visParams)
 
 
 ```
 
+
+```{r}
+f1 = ## Point and buffer
+point <- ee$Feature(ee$Geometry$Point(lon, lat)$buffer(100))
+tf <- ee$Feature(ee$Geometry$Point(lon, lat)$buffer(1000))
+fc = ee$FeatureCollection(c(point,tf))
+
+S2 = ee$ImageCollection('COPERNICUS/S2_SR')$filterBounds(fc)$filterDate(start_date,end_date)$maskClouds()$scaleAndOffset()$spectralIndices(c('EVI','NDVI'))
+
+S2$size()$getInfo()
+
+# By Region
+  ts = S2$getTimeSeriesByRegion(reducer = c(ee$Reducer$median()),
+                                geometry = fc,
+                                bands = list('EVI','NDVI'),
+                                scale = 10)
+ts$size()$getInfo()y
+
+cat(unlist(ts$limit(2)$getInfo()))
+
+visParams <- list(bands = c("EVI", "NDVI"), min = -1, max = 1, palette = viridis::cividis(10))
+
+
+Map$addLayer(ts$first(), visParams = visParams)
+
+
+```
 
 
 ```{r}
@@ -169,10 +215,10 @@ Map$addLayer(ee$Image(s2_tidy$vrt$id[i])$clip(point), visParams = visParams)
 
 
 
+
+
+
 ```
-
-
-
 
 ```{r}
 
