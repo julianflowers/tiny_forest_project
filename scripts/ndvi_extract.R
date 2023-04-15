@@ -1,16 +1,19 @@
 needs(rgee, rgeeExtra, reticulate, tidyverse, RColorBrewer, geojsonio, leaflet, mapview, leaflet.extras2, furrr, future)
 plan(multisession, workers = 4)
-reticulate::virtualenv_remove("rgee")
-reticulate::virtualenv_create("rgee", system_site_packages = TRUE)
-reticulate::use_python('/Users/julianflowers/.virtualenvs/rgee/bin/python')
+
+Sys.setenv(RETICULATE_PYTHON = '/Users/julianflowers/.virtualenvs/rgee/bin/python')
 reticulate::use_virtualenv("rgee")
-reticulate::py_install(packages = c("earthengine-api", "geemap"), pip = TRUE,
+
+reticulate::py_install(packages = c("earthengine-api", "geemap", "eemont", "plotly", "geedim"), pip = TRUE,
                        envname = "rgee")
-ee <- import("earthengine_api")
+
+ee <- import("ee")
 geemap <- import("geemap")
+eem <- import("eemont")
+
 ee_Initialize(user = "julian.flowers12@gmail.com", drive = TRUE, gcs = TRUE)
 
-tf <- read_csv("data/tf_lat_long.csv")
+tf <- read_csv("../data/tf_w_1.csv")
 
 tf |>
   mutate(row = row_number()) |>

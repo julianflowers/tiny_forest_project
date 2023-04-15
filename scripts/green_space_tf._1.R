@@ -33,13 +33,14 @@ tf_data <- read_csv("data/tf_w_1.csv")
 ## create sf
 
 tf_data_sf <- tf_data |>
-  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) |>
+  st_transform(27700)
 
 tf_data_sf |>
   ggplot() +
   geom_sf()
 
-tf_data_buff <- st_buffer(tf_data_sf, 1000) |>
+tf_data_buff <- st_buffer(tf_data_sf, 50) |>
   st_transform(27700)
 
 tf_data_buff |>
@@ -48,11 +49,18 @@ tf_data_buff |>
 
 
 st_crs(allotments)
-ol <- st_contains(y = st_centroid(allotments), tf_data_buff)
 
-inter <-st_intersection(tf_data_buff, allotments) ## overlap between tf buffer and urban greenspace
+## Do any greenspace areas or priority woodland intersect with TFs??
+ol <- st_contains(tf_data_sf, allotments)
 
-wood <- st_intersection(tf_data_buff, woodland_data)
+inter <-st_intersection(allotments, tf_data_buff) ## overlap between tf buffer and urban greenspace
+wood <- st_intersection(woodland_data, tf_data_buff)
+
+inter
+wood
+
+mapview(wood) +
+  mapview(inter)
 
 gs_buff <- select(inter, who:tfid, type = function.) |>
   bind_rows(select(wood, who:tfid, type = MainHabs))
