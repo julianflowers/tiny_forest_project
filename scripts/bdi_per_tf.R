@@ -22,13 +22,13 @@
 #' @export
 
 
-calc_bd_metrics <- function(tfid, class){
+calc_bd_metrics <- function(df, tfid, class){
 
    library(data.table)
    library(vegan)
    library(tidyverse)
 
-  tf_bd <- fread("large-data/nbn_tf_data.csv")
+  tf_bd <- fread(df)
 
   tf_bd[, tf_id := parse_number(tf)]
   tf_bd[tf_id == tfid, ]
@@ -80,9 +80,11 @@ calc_bd_metrics <- function(tfid, class){
 
 
 
-  out <- list(metrics = div, matrix = tf_bd_w, plot = plot, bray = bray, raup = raup)
+  out <- list(metrics = div, matrix = species, plot = plot, bray = bray, raup = raup)
 
 }
+
+
 
 
 

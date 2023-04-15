@@ -9,18 +9,20 @@ forest_carbon <- 'Carbon OR Climate_Change OR Nature_Based_Solution$) AND
 
 q <- "Nature"
 
-search_woslite(api_key = "e4879094187828aa948bf61348587b8059f6814a", query = forest_carbon)
+
+
+search_woslite(api_key = "e4879094187828aa948bf61348587b8059f6814a", query = "(biodiversity OR species diversity OR species richness) AND (urban forest OR tiny forest OR community garden* OR allotment* OR green space)")
 
 library(myScrapers)
 
 ncbi_key = "bd86b3e3500c581cbc6ee0896f551bae0408"
-search <- "urban (forest OR nature based solution*[tw]) biodiversity"
+search <- "(urban forest OR nature based solution*[tw] OR tiny forest[tw] OR alloment* OR community garden*) AND (biodiversity OR species richness OR species diversity) review[pt]"
 start = 2000
 end = 2023
 
-res <- pubmedAbstractR(search = search, start = start, end = end, ncbi_key = ncbi_key, n = 100)
+res <- pubmedAbstractR(search = search, start = start, end = end, ncbi_key = ncbi_key, n = 164)
 
-res$abstracts$title
+res$abstracts[108,]$title
 
 res$abstracts[9,2] |>
   gt::gt()
