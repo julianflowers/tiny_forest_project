@@ -70,23 +70,8 @@ my_fn <- function(data, mapping, ...){
 ggpairs(join_r[, c(2, 5, 11)], lower = list(continuous = my_fn))
 
 
-join_r |>
-  ggplot() +
-  geom_point(aes(shannon, shannon.x)) +
-  geom_smooth(aes(shannon, shannon.x), se = FALSE) +
-  geom_point(aes(shannon, shannon.y), colour = "red") +
-  geom_smooth(aes(shannon, shannon.y), colour = "red", se = FALSE)
-
-
-|>
-  pivot_longer(names_to = "richness", values_to = "vals", cols = c(1, 2, 4, 5, 10, 11)) |>
-  select(richness, vals)
-
-ggpairs(join_r)
-
-lattice::xyplot(join_r)
-
-pairs(join_r[c(1, 2, 4, 5, 10, 11)])
+pairs(join_r[c(1, 2, 4, 5, 10, 11)],
+      panel = panel.smooth)
 
 ## min richness
 df_div |>
