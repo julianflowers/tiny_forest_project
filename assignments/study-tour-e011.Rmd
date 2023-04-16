@@ -3,10 +3,10 @@ title: "Study tour E011"
 author: 'SID: 2050507'
 date: "`r Sys.Date()`"
 output:
+  word_document: default
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
-  word_document: default
 bibliography: references.bib
 ---
 
@@ -61,21 +61,23 @@ Photo credits: Google Images
 
 ------------------------------------------------------------------------
 
-## Birds can synchronise nesting times with oak leafing despite climate change
+## Climate warming impacts on egg laying of great tits
 
-Climate warming can have differential effects on the timing of seasonal natural events. Wytham Woods in Oxfordshire is the site of long term studies of the relationship between first leafing in oak trees and nesting
+Climate warming can have differential effects on the timing of seasonal natural events. In Monks Wood, the time of first egg laying of blue and great tits has been studied for 23 years in relation to climate events. Tits lay their eggs earlier when spring temperatures are higher, and spring temperatures in the Northern Hemisphere are influenced by a climatic phenomenon known as the North Atlantic Oscillation (NAO) which is a measure of the differences in air pressure between the Azores and the Icelandic low pressure system. There is evidence that this has been increasing due to climate change, in turn increasing spring temperatures, and impacting bird phenology.
 
-![Ancient oak in Wytham Woods](images/old_man_of_wytham.jpeg){width="292"}
+![Ancient oak ](images/old_man_of_wytham.jpeg){width="292"}
 
 ![Great tits depend on oaks](images/download.jpeg)
 
-@cole2021
+@hinsley2016
+
+Photo credits: Google Images
 
 ## Poleward movement of dragonflies
 
-1.  Ecological effects of climate change are not necessarily all negative. Many
+One consequence of global warming is the range expansion of many species towards the poles. In Europe many species are moving north and being seen in Britain for the first time or establishing breeding populations. Dragonfly distribution is sensitive to temperature because it impacts on habitat and food, reproductive and physiological processes and the aquatic stages of their life cycle. In Britain, several species are now being recorded for the first time and being seen further north than in the past.
 
-![New arrival in the UK. Willow emerald damselfly](images/willow-emerald-damselfly.jpeg)
+![![Northward spread of dragonflies](images/diversity-14-01066-g004.png)New arrival in the UK. Willow emerald damselfly](images/willow-emerald-damselfly.jpeg)
 
 [@olsen2022]
 
