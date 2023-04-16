@@ -1,6 +1,6 @@
 ---
-title: "Tiny forest project plan"
-subtitle: "Submission for MOD0002205 E011"
+title: "Tiny forest research proposal"
+subtitle: "Submission for MOD000371 E011"
 date: "`r format(Sys.Date(), '%B %d %Y')`"
 author: "SID: 2050507"
 institute: "Anglia Ruskin University"
@@ -22,7 +22,7 @@ execute:
 
 citations-hover: true
 bibliography: references.bib
-csl: /Users/julianflowers/Zotero/styles/harvard-anglia-ruskin-university.csl
+csl: ../papers/harvard-anglia-ruskin-university.csl
 ---
 
 ```{r setup, include=FALSE}
@@ -38,44 +38,43 @@ knitr::opts_chunk$set(fig.path = "figs/",
 
 ## Introduction
 
-### The biodiversity crisis
+There is a global biodiversity crisis @bongaarts2019 and Britain is one of the least biodiverse countries in Europe @whywen. Drivers for biodiversity loss include global population increases and changes in use of land for food and development with increasing urbanisation. @mcdonnell1990 argued that the urban areas and urbanisation should be an important part of ecological research, more than 30 years ago. @rega-brodsky2022, reviewing the current state of urban biodiversity science and research, found rapid growth in publications over the last 20 years, with an increasing interest in urban restoration and management more recently. However, they highlight the relative paucity of research addressing urban ecological restoration despite this being the UN Decade on Ecosystem Restoration @undecada; including urban settings @environment2021a.
 
-Britain is one of the least biodiverse countries in Europe @whywen. Urban restoration
-
-In 2021 we entered the UN Decade of Ecosystem Restoration (UNDECAD) which aims to stop ecosystem decline, in order to promote human welfare, tackle climate change and halt biodiversity collapse @undecad.
-
-The Resolution proposing UNDECAD emphasized the importance of habitat maintenance and restoration:
-
-> *"Emphasizing that forests, wetlands, drylands and other natural ecosystems are essential for sustainable development, poverty alleviation and improved human wellbeing"*
-
-Growth of urbanisation - Urban restoration / nature based solutions as a means of improving wellbeing, tackling biodiversity loss, carbon
-
-### Urban forests
+There has been a particular interest in tree-planting and urban afforestation as a mechanism for both tackling climate change and ecological restoration. @rega-brodsky2022 found that forest habitats constituted 48% of studies with an urban ecological management focus.
 
 ### Tiny forests
 
-One recent approach to urban ecological restoration which is growing in popularity is the development of Tiny Forests (TF)[^1]. These are defined as small scale (100 - 200 m^2^) densely planted native woodlands. There is a strong emphasis on native planting and soil preparation, community engagement and citizen science.
+One recent approach to urban ecological restoration which is growing in popularity is the development of Tiny Forests (TF)[^1]. These are defined as small scale (100 - 200 m^2^) densely planted native woodlands. There is a strong emphasis on native planting and soil preparation, community engagement and citizen science. There is a focus on local people planting, managing and using TFs. A number of benefits have been attributed to TFs including carbon capture and storage, flood management and improving thermal comfort by providing shade.
 
-The TF concept originated in the work of Akiro Miyawaki in Japan who applied ecological principles to forest regeneration as part of disaster recovery and mitigation[@Miyawaki1993-ji; @Miyawaki2004-di; @WOS:000078078300016]. His original ideas were adopted widely in South East Asia and now have spread worldwide inspired by a TED talk by Shubhendu Sharma. The current approach in the UK is largely based in work in the Netherlands and is and proscribed by the Tiny Forest Handbook @noauthorundated-zc.
+[^1]: Also known as mini-forests, small wildernesses or pocket forests
 
-### Tiny forest development in UK
+The TF concept originated in the work of Akiro Miyawaki in Japan who applied ecological principles to forest regeneration as part of disaster recovery and mitigation[@Miyawaki1993-ji; @Miyawaki2004-di; @WOS:000078078300016]. He hypothesised that native planting and careful soil preparation could accelerate forest growth.
 
-The first TF in the UK was planted at Witney in Oxfordshire in 2020 and more than 160 have been planted since. Current locations are shown in the map.
+His original ideas were adopted widely in South East Asia and now have spread worldwide inspired by a TED talk by Shubhendu Sharma. The current approach in the UK is largely based in work in the Netherlands and is proscribed by the Tiny Forest Handbook [@noauthorundated-zc].
+
+Following the recommendations of the handbook is resource intensive and require considerable planning. Heavy machinery may be needed to prepare the ground, each plot may be planted with up to 600 trees, careful soil preparation may require the expert input, and the application of citizen science requires a cadre of volunteers to be trained and give their time on an ongoing basis. In addition, TF curation needs local input and the system employs Tree Keepers who are a local contact responsible for ongoing maintenance and management.
+
+#### Tiny forest development in UK
+
+The first TF in the UK was planted at Witney in Oxfordshire in March 2020 and more than 170 have been planted since. They are largely planted on amenity grassland (e.g. school grounds) and often have commercial sponsorship. They are increasingly being incorporated into local government climate change and biodiversity improvement plans.
+
+Current locations are shown on the map.
 
 ```{r location-tiny-forest, fig.cap="Figure \\ref{fig:fig1} Location of Tiny Forests at March 2023"}
 
 ## replace dot with tree symbol
 
 Sys.setenv(GGMAP_GOOGLE_API_KEY= "AIzaSyBhAWbDyKX2chM2Jz0ZV22uT_8qN7YKL3Q")
+library(needs)
+needs(ggmap, tidyverse, sf, here, lubridate, vegan, data.table, mapview)
 
-needs(ggmap, tidyverse, sf, here)
+tf_w <- fread("../data/tf_trees.csv") |>
+  mutate(year = year(date), 
+         year_month = zoo::as.yearmon(date))
 
-tf_w <- read_csv("../data/tf_w_1.csv") |>
-  mutate(year = year(when), 
-         year_month = zoo::as.yearmon(when))
-
-tf_sf <- tf_w  |>
+tf_1 <- tf_w |>
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
+
 
 p <- ggmap::get_googlemap(center = c(lon = -1, lat = 53.5), 
                           zoom = 6, maptype = "terrain")
@@ -88,16 +87,15 @@ ggmap(p) +
 
 ```
 
-```{css}
-.mermaid {
-  background-color: lightblue;
-  fill: green;
-  border: none;
-  padding: 15px;
-  border-radius: 5px;
-}
+### Existing research
 
-```
+Rapid preliminary literature review reveals very little research on the benefits or biodiversity impact of TFs to date. This is not surprising in a UK context given their relative novelty. Earth Watch published a snap shot of the performance of the UK Tiny Forest programme in 2022. Reporting on 359 biodiversity surveys focusing on butterflies, pollinators and ground-dwelling invertebrates, they found (excluding ants) woodlice were the predominant invertebrate, "other flies" the predominant pollinator, and small white the commonest butterfly. They found little variation between forests but there was some evidence of increase in richness of invertebrates over time @hunston.
+
+@Ottburg2018-ls conducted periodic surveys of bird frequency, flora and and soil fauna using a standardised methodology at two TFs in Zaanstad compared with two close-by forested areas in order to assess whether TFs can bring biodiversity and whether citizen science (CS) can generate biodiversity overviews. The authors found that selected pollinators and soil invertebrates were more abundant in the TFs than controls, but they didn't perform any statistical analysis and the comparability of control groups wasn't stated @Ottburg2018-ls.
+
+TFs are in effect a change in land-use of amenity grassland areas but other options exist to improve biodiversity through altered land-use. For example, @Helden2004-ro estimated species richness of Hemiptera (true bugs) on urban roundabouts in Bracknell, Hampshire UK and found that native planting had greater abundance than non-native planting which in turn influenced the abundance of blue and great tits [@Helden2012-wr]. Allotments and community gardens (urban agriculture) have also been found to impact biodiversity although a recent systematic review found a strong North American bias, and limited taxal focus [@clucas2018].
+
+@cárdenas2022 outline research objectives for TFs including monitoring the seasonal and inter-forest variation in invertebrate richness and abundance, and relating it to the surrounding green infrastructure.
 
 ```{mermaid}
 %%| fig-width: 6
@@ -143,31 +141,19 @@ graph LR
 
 ```
 
-### Existing research
+### Measuring biodiversity
 
-Rapid preliminary literature review reveals very little research on the benefits or biodiversity impact of TFs to date. This is not surprising in a UK context given their relative novelty. Earth Watch published a snap shot of the performance of the UK Tiny Forest programme in 2022. Reporting on 359 biodiversity surveys focusing on butterflies, pollinators and ground-dwelling invertebrates, they found (excluding ants) woodlice were the predominant invertebrate, "other flies" the predominant pollinator, and small white the commonest butterfly. They found little variation between forests but there was some evidence of increase in richness of invertebrates over time @hunston.
+Measuring biodiversity is essential for monitoring the impact of any land use change but is not straightforward. It involves a number of underlying concepts: *species* *richness* which involves counting the number of different species; *abundance* which estimates the number of each species or taxa; *evenness* which measures the distribution of abundance among species or taxa; and *community composition* which takes into account the extent to which species co-occur in given locations or habitats. As a results numerous metrics and indices have been proposed to summarise and compare biodiversity by place and over time.
 
-@Ottburg2018-ls conducted periodic surveys of bird frequency, flora and and soil fauna using a standardised methodology at two TFs in Zaanstad compared with two close-by forested areas in order to assess whether TFs can bring biodiversity and whether citizen science (CS) can generate biodiversity overviews. The authors found that selected pollinators and soil invertebrates were more abundant in the TFs than controls, but they didn't perform any statistical analysis and the comparabiilty of control groups wasn't stated @Ottburg2018-ls.
+The simplest and most widely used index is richness (or species number) [@rega-brodsky2022] which is simply a count of recorded species, however given that all biodiversity data is based on sampling, such counts are rarely comprehensive. For many taxa, detection and species identification can be difficult; sampling effort may vary, especially where opportunistic data is used; so techniques to allow for sampling variation and under-detection and recording have been developed. Diversity metrics like Shannon-Weiner are also commonly used as well as ordination techniques, for example, Non Metric Dimensional Scaling (NDMS).
 
-@cárdenas2022 outline research objectives for TFs including monitoring the seasonal and inter-forest variation in invertebrate richness and abundance, and relating it to the surrounding green infrastructure.
-
-TFs are in effect a change in land-use of amenity grassland areas but other options exist to improve biodiversity through altered land-use. For example, @Helden2004-ro estimated species richness of Hemiptera (true bugs) on urban roundabouts in Bracknell, Hampshire UK and found that native planting had greater abundance than non-native planting which in turn influenced the abundance of blue and great tits @Helden2012-wr. Allotments and community gardens (urban agriculture) have also been found to impact biodiversity although a recent systematic review found a strong North American bias, and limited taxal focus @clucas2018.
+I am not proposing to thorough review of available metrics in this research, but recommended richness estimation methods include Chao and Jack-knife [@Helden2005-ol; @Henderson2021-yr].
 
 ## Aims and objectives of this research
 
-The primary objectives of this research area
-
-1.  Characterise
-
-2.  Make an initial assessment of biodiversity associated with each TF and the surrounding area
-
-3.  Explore how biodiversity varies between TFs by taxa and over time
-
-4.  Compare biodiversity estimates from directly collected data with those derived from analysis of NBN atlas data.
+The primary objective of this study are to quantify biodiversity associated with TF areas and assess how it varies between TFs and over time. This will necessitate characterising variabilty in TFs -- tree planting schemes vary from place to place which may influence invertebrate biodiversity, with different trophic impacts. It will require estimating biodiversity in a wider area and estimating contextual and environmental variables around the location.
 
 ## Proposed methods
-
-The study will largely be desk based using publicly available datasets. I propose to visit a convenience sample of TFs in my local area to help my understanding and with permission of Earth Watch talk to local TF custodians (known as Treekeepers). This will provide more context for how TFs are managed and maintained, local CS programmes, and help the utility and acceptability of this research.
 
 ### Literature review
 
@@ -176,16 +162,6 @@ I will undertake a rapid review of the literature on the relationship between bi
 > (tiny forest OR small wilderness OR pocket forest OR mini forest OR allotment\* OR urban forest\* OR community garden\*) AND (diversity OR biodiversity OR species diversity OR species richness)
 >
 > Based on @clucas2018
-
-### Measuring biodiversity
-
-Measuring biodiversity is essential for monitoring the impact of any land use change but is not straightforward. It involves a number of underlying concepts: *species* *richness* which involves counting the number of different species; *abundance* which estimates the number of each species or taxa; *evenness* which measures the distribution of abundance among species or taxa; and *community composition* which takes into account the extent to which species co-occur in given locations or habitats. As a results numerous metrics and indices have been proposed to summarise and compare biodiversity by place and over time.
-
-The simplest and most widely used index is richness (or species number) which is simply a count of recorded species, however given that all biodiversity data is based on sampling, such counts are rarely comprehensive. For many taxa, detection and species identification can be difficult; sampling effort may vary, especially where opportunistic data is used; so techniques to allow for sampling variation and under-detection and recording have been developed. I am not proposing to thorough review of available metrics in this research, but recommended richness estimation methods include Chao and Jack-knife @Helden2005-ol @Henderson2021-yr
-
-### Classifying TFs as habitat
-
-As an initial step I propose to classify TFs according to their location, age, size and planting scheme - this will help simplify the analysis of variation and trends in biodiversity.
 
 ```{r}
 
@@ -206,6 +182,29 @@ tf_w <- tf_w |>
 
 ```
 
+### Characterising TFs
+
+A number of factors may influence biodiversity generated by TFs including the base planting scheme, survival rates, biodiversity in the surrounding area, urban-rural classification and proximate green space (notably allotments or community gradens) or forests
+
+### Modelling BD
+
+Two threads:
+
+Comparing BD between TF areas
+
+1.  Summary data from buffers
+    -   Class specific species richness and diversity
+    -   Land-use
+    -   Green space
+    -   Woodland
+    -   Vegetation indices
+    -   Urban-rural nature
+    -   Seasonal adjustment
+2.  Explanatory of buffer BD
+3.  BD for TF areas using covariates from 1 and data from
+
+Do
+
 ### Control groups
 
 To evaluate variation and change in biodiversity I propose two controls per TF:
@@ -214,7 +213,7 @@ To evaluate variation and change in biodiversity I propose two controls per TF:
 
 2.  The nearest deciduous woodland area identified from Natural England's Priority Habitat Inventory.
 
-For each I propose to calculate an annual time series of biodiversity metrics - species richness and Shannon Weiner diversity index - across 3 classes - Aves, Insecta and mammalia in a buffer of 500m around the centroid of each area. These 3 classes represent a subtatinal proportion of the records in teh NBN atlas and complement the CS datasets This analysls potentially gives nearly 1500 time-series (160 areas x 3 ts per area = 480, x 3 classes) so one approach might be to draw a stratified random sample of areas to reduce analytical overhead and complexity \[although power, and automation\].
+For each I propose to calculate an annual time series of biodiversity metrics - species richness and Shannon Weiner diversity index - across 3 classes - Aves, Insecta and mammalia in a buffer of 500m around the centroid of each area. These 3 classes represent a substantial proportion of the records in teh NBN atlas and complement the CS datasets This analyses potentially gives nearly 1500 time-series (160 areas x 3 ts per area = 480, x 3 classes) so one approach might be to draw a stratified random sample of areas to reduce analytically overhead and complexity \[although power, and automation\].
 
 ### 
 
@@ -238,7 +237,7 @@ flowchart LR
 
 ### Data
 
-The data sources I propose to use and analytical uses are outlined in the table. The National Biodiversity Network (NBN) Atlas is a large scale repository of public biodiversity data with more than 200 million records covering more than 50,000 species. Inputs are a mix of opportunisitc data from citizen science as well as more standardised datasets from national monitoring schemes, record centres and government agencies @nbnatlaa.
+The data sources I propose to use and analytically uses are outlined in the table. The National Biodiversity Network (NBN) Atlas is a large scale repository of public biodiversity data with more than 200 million records covering more than 50,000 species. Inputs are a mix of opportunistic data from citizen science as well as more standardised datasets from national monitoring schemes, record centres and government agencies @nbnatlaa.
 
 Earth Watch kindly provided a series of spreadsheet datasets representing the range of proposed data collections Figure
 
@@ -310,7 +309,7 @@ graph LR
 |              | Earth Watch data                           | Calculate diversity indices for Tiny Forests                                        |
 | Tiny Forests | Earth Watch data                           | Features of TFs e.g. age, area, planting density and diversity                      |
 |              | Sentinel-2 (satellite data)                | Land-cover and vegetation indices                                                   |
-|              | OS                                         | Local greenspace                                                                    |
+|              | OS                                         | Local green space                                                                   |
 |              | Natural England                            | Local woodland                                                                      |
 |              | ONS                                        | Urban rural classification, social deprivation scores                               |
 
@@ -399,16 +398,14 @@ gantt
 
 ## Ethics
 
-The ethical approval form is attached at Annex. The proposed research is largely desk-based.
+The ethical approval form is attached at Annex. The study will largely be desk based using publicly available datasets. I propose to visit a convenience sample of TFs in my local area to help my understanding and with permission of Earth Watch talk to local TF custodians (known as Tree keepers). This will provide more context for how TFs are managed and maintained, local CS programmes, and help the utility and acceptability of this research.
 
 ## Risk management
 
-Given the proposal is largely desk based, there will be no risks from site visits or field work.
+Given the proposal is largely desk based, there will be limited risks from site visits or field work. I will only visit publicly accessible forests
 
 ## Potential benefits of proposed research
 
 There is a lack of high quality research on the impact of urban restoration on biodiversity and Tiny Forests in particular. Given their increasing profile, setup costs and relative resource intensity in volunteer based monitoring and maintenance it is hoped this research will provide a framework for using routine public data to assist ongoing biodiversity assessment. It is hoped that this in turn will contribute to demonstrating the value of TFs as a form of urban ecological restoration as well as a community asset for well-being and education.
 
 ## References
-
-[^1]: Also known as mini-forests or pocket forests
