@@ -172,7 +172,6 @@ Map$addLayer(s2_c, visParams) | Map$addLayer(s21_c, visParams)
 
 ```
 
-
 ```{r}
 f1 = ## Point and buffer
 point <- ee$Feature(ee$Geometry$Point(lon, lat)$buffer(100))
@@ -199,7 +198,6 @@ Map$addLayer(ts$first(), visParams = visParams)
 
 
 ```
-
 
 ```{r}
 
