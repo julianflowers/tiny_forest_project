@@ -1,20 +1,52 @@
 needs(tidyverse, vegan)
 path <- here::here()
 source(paste0(path, "/scripts/nbn_buffer.R"))
-tfLL <- read_csv("https://github.com/julianflowers/tiny_forest_project/blob/main/data/tf_w_1.csv?raw=TRUE")
-tfLL <- tfLL[-54,]
+
+tfLL <- read_csv("data/tf_trees.csv")
+
+tfLL[6,]
 
 safe_buff <- safely(get_nbn_buffer)
 
 
-nbn_bd_data_5 <- purrr::map(1:50, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_1 <- purrr::map(1:10, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_2 <- purrr::map(11:20, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_3 <- purrr::map(21:30, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_4 <- purrr::map(31:40, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_5 <- purrr::map(41:50, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_6 <- purrr::map(51:60, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_7 <- purrr::map(61:70, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_8 <- purrr::map(71:80, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_9 <- purrr::map(81:90, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_10 <- purrr::map(91:100, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_11 <- purrr::map(101:110, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_12 <- purrr::map(111:120, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_13 <- purrr::map(121:130, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_14 <- purrr::map(131:140, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_15 <- purrr::map(141:150, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_16 <- purrr::map(151:160, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_17 <- purrr::map(161:170, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+nbn_bd_data_18 <- purrr::map(171:174, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+
+
+res <- map(nbn_bd_data_9, "result")
+
+map(res, dim)
 
 nbn_bd_data_4 <- purrr::map(51:120, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
 
 nbn_bd_data_3 <- purrr::map(121:176, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
 
 
-nbn_data_final <- map(c(nbn_bd_data_5, nbn_bd_data_4, nbn_bd_data_3),  "result")
+nbn_data_final <- map(c(nbn_bd_data_1, nbn_bd_data_17, nbn_bd_data_10,
+                        nbn_bd_data_11, nbn_bd_data_12, nbn_bd_data_13,
+                        nbn_bd_data_14, nbn_bd_data_15, nbn_bd_data_16,
+                        nbn_bd_data_17, nbn_bd_data_18, nbn_bd_data_2,
+                        nbn_bd_data_3, nbn_bd_data_4, nbn_bd_data_5,
+                        nbn_bd_data_6, nbn_bd_data_7, nbn_bd_data_8, nbn_bd_data_9),  "result")
+
+nbn_data_final |>
+  saveRDS("buffer_bd.rds")
 
 nbn_data_final <- nbn_data_final[1:175]
 
@@ -29,7 +61,7 @@ nbn_data_final <- setNames(nbn_data_final, n[-c(124, 151, 154:158)])
 
 map(nbn_data_final, is.null)
 
-nbn_data_final <- map_dfr(1:168, ~(nbn_data_final[[.x]] |> mutate(tf = names(nbn_data_final[.x]))))
+nbn_data_final <- map_dfr(1:174, ~(nbn_data_final[[.x]] |> mutate(tf = names(nbn_data_final[.x]))))
 
 nbn_data_final <- nbn_data_final |>
   select(kingdom:tf)
