@@ -29,7 +29,7 @@ nbn_bd_data_17 <- purrr::map(161:170, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n 
 nbn_bd_data_18 <- purrr::map(171:174, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
 
 
-res <- map(nbn_bd_data_9, "result")
+res <- map(nbn_bd_data_18, "result")
 
 map(res, dim)
 
@@ -38,12 +38,13 @@ nbn_bd_data_4 <- purrr::map(51:120, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 
 nbn_bd_data_3 <- purrr::map(121:176, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
 
 
-nbn_data_final <- map(c(nbn_bd_data_1, nbn_bd_data_17, nbn_bd_data_10,
+nbn_data_final <- map(c(nbn_bd_data_1, nbn_bd_data_2, nbn_bd_data_3, nbn_bd_data_4, nbn_bd_data_5,
+                        nbn_bd_data_6[2:10], nbn_bd_data_7, nbn_bd_data_8, nbn_bd_data_9,
+                        nbn_bd_data_10,
                         nbn_bd_data_11, nbn_bd_data_12, nbn_bd_data_13,
                         nbn_bd_data_14, nbn_bd_data_15, nbn_bd_data_16,
-                        nbn_bd_data_17, nbn_bd_data_18, nbn_bd_data_2,
-                        nbn_bd_data_3, nbn_bd_data_4, nbn_bd_data_5,
-                        nbn_bd_data_6, nbn_bd_data_7, nbn_bd_data_8, nbn_bd_data_9),  "result")
+                        nbn_bd_data_17[1:9], nbn_bd_data_18[1:3]
+                        ),  "result")
 
 nbn_data_final |>
   saveRDS("buffer_bd.rds")
