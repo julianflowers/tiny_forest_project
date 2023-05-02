@@ -1,10 +1,20 @@
-needs(tidyverse, vegan)
+needs(tidyverse, vegan, data.table)
 path <- here::here()
 source(paste0(path, "/scripts/nbn_buffer.R"))
 
+get_nbn_buffer(lon = -5.186, lat = 58.380, radius = 2000, n = 40000) -> inchnadamph
+
+setDT(inchnadamph)[classs == "Aves" & vernacularName == "Wood Warbler" & between(year, 2010, 2020), .N, by = .(year)][order(-N)]|>
+  top_n(100)
 tfLL <- read_csv("data/tf_trees.csv")
 
-tfLL[6,]
+
+tfLL[216, ]
+
+ids <- tfLL$tf_id[-c(51, 170)]
+
+
+# remove 51, check 73, 83, 84
 
 safe_buff <- safely(get_nbn_buffer)
 
@@ -26,52 +36,47 @@ nbn_bd_data_14 <- purrr::map(131:140, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n 
 nbn_bd_data_15 <- purrr::map(141:150, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
 nbn_bd_data_16 <- purrr::map(151:160, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
 nbn_bd_data_17 <- purrr::map(161:170, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
-nbn_bd_data_18 <- purrr::map(171:174, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
+#nbn_bd_data_18 <- purrr::map(171:174, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
 
 
-res <- map(nbn_bd_data_18, "result")
+res <- map(nbn_bd_data_17, "result")
 
 map(res, dim)
-
-nbn_bd_data_4 <- purrr::map(51:120, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
-
-nbn_bd_data_3 <- purrr::map(121:176, ~(safe_buff(tfLL$lon[.x], tfLL$lat[.x], n = 30000)))
-
 
 nbn_data_final <- map(c(nbn_bd_data_1, nbn_bd_data_2, nbn_bd_data_3, nbn_bd_data_4, nbn_bd_data_5,
                         nbn_bd_data_6[2:10], nbn_bd_data_7, nbn_bd_data_8, nbn_bd_data_9,
                         nbn_bd_data_10,
                         nbn_bd_data_11, nbn_bd_data_12, nbn_bd_data_13,
                         nbn_bd_data_14, nbn_bd_data_15, nbn_bd_data_16,
-                        nbn_bd_data_17[1:9], nbn_bd_data_18[1:3]
+                        nbn_bd_data_17[1:9]
                         ),  "result")
 
 nbn_data_final |>
   saveRDS("buffer_bd.rds")
 
-nbn_data_final <- nbn_data_final[1:175]
-
-n <- pluck(tfLL, "stub")
-
-nbn_data_final <- nbn_data_final[-c(124, 151, 154:158)]
-
-length(nbn_data_final)
-
-nbn_data_final <- setNames(nbn_data_final, n[-c(124, 151, 154:158)])
+names(nbn_data_final)
 
 
-map(nbn_data_final, is.null)
+nbn_data_final_1 <- map_dfr(1:168, ~(nbn_data_final[[.x]] |> mutate(tf = ids[.x])))
 
-nbn_data_final <- map_dfr(1:174, ~(nbn_data_final[[.x]] |> mutate(tf = names(nbn_data_final[.x]))))
+nbn_data_final_1 <- nbn_data_final_1[-1059949,]
 
-nbn_data_final <- nbn_data_final |>
-  select(kingdom:tf)
+setDT(nbn_data_final_1)
 
-nbn_data_final |>
-  write_csv("nbn_tf_data.csv")
+nbn_data_final_1[between(year, 2010, 2023), .N, by = .(tf, year)][order(tf, year)] |>
+  ggplot() +
+  geom_tile(aes(year, factor(tf), fill = log(N))) +
+  scale_fill_viridis_c(direction = -1, option = "rocket") +
+  ggthemes::theme_base()
 
-nbn_data_recent <- nbn_data_final |>
+nbn_data_final_1 |>
+  fwrite("nbn_tf_data.csv")
+
+nbn_data_recent <- nbn_data_final_1 |>
   filter(between(year, 2010, 2023))
+
+nbn_data_recent <- nbn_data_recent |>
+  setDT()
 
 nbn_data_recent |>
   count(tf, year, classs) |>
@@ -91,15 +96,15 @@ nbn_data_recent |>
   ggthemes::theme_base() +
   theme(plot.background = element_blank())
 
-nbn_bd_data[[1]]$result |>
+nbn_data_recent |>
+  filter(tf == 85) |>
   count(classs, year) |>
-  filter(year >= 2010) |>
-  ggplot() +
-  geom_tile(aes(year, classs, fill = n))
+  filter(classs == "Aves")
 
-tychwood_nbn_year <- nbn_bd_data[[1]]$result |>
+tychwood_nbn_year <- nbn_data_recent |>
+  filter(tf == 85) |>
   filter(year >= 2010,
-         classs == "Aves") |>
+         classs == "Insecta") |>
   select(year, vernacularName, species) |>
   count(vernacularName, year) |>
   pivot_wider(names_from = "vernacularName",
@@ -108,9 +113,14 @@ tychwood_nbn_year <- nbn_bd_data[[1]]$result |>
               values_fill = 0) |>
   arrange(year)
 
+tychwood_nbn_year |>
+  count(year)
+
 year <- factor(tychwood_nbn_year$year)
 species <- tychwood_nbn_year[,-1 ] |>
   janitor::clean_names()
+
+
 
 sn <- tychwood_nbn_year |>
   vegan::specnumber() |>
@@ -120,9 +130,12 @@ tychwood_nbn_year |>
   vegan::diversity() |>
   bind_cols(year)
 
+vegdist(species, "bray") |>
+  hclust() |>
+  plot()
 
 vegan::adonis2(species ~ year, model = c("raw"), permutations =
-                                        9999, method = "euclidean", autotransform
+                                        9999, method = "raup", autotransform
                                       = TRUE)
 
 

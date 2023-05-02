@@ -47,7 +47,7 @@ df <- read_csv("data/tf_trees.csv")                    ## import tf data
 
 s2 <- ee$ImageCollection("COPERNICUS/S2_SR_HARMONIZED") ## import image collection
 
-id <- 214
+id <- 100
 
 tf_pd <- df |>
   filter(tf_id == id) |>
@@ -68,16 +68,19 @@ tf <- ee$Geometry$Point(lon, lat)$buffer(1000)
 
 visParams <- list(min = -.5, max = .8, palette = c("red","yellow","green"))
 
-start_date <- "2023-01-01"
-end_date <- "2023-04-01"
+start_date <- "2021-01-01"
+end_date <- "2022-04-01"
 
 s2_filt <- s2$filterBounds(tf)
-s2_filt <- s2$filterDate(start_date, end_date)
+s2_filt <- s2_filt$filterDate(start_date, end_date)
 s2_filt <- s2_filt$filter(ee$Filter$lt("CLOUDY_PIXEL_PERCENTAGE", 10))
 
 
 
 s2_tidy <- tidyrgee::as_tidyee(s2_filt)
+
+s2_tidy$vrt |>
+  pluck("id")
 
 s2_quarterly <- s2_tidy$vrt |>
   mutate(yq = zoo::as.yearqtr(time_start))
@@ -95,7 +98,11 @@ s2_spring_summer <- s2_quarterly |>
 Map$centerObject(tf)
 Map$addLayer(tf, name = "Buffer") +
   Map$addLayer(point, name = "Loc") +
-  Map$addLayer(s2_filt$median()$clip(tf), visParams = list(min = 0, max = 3000, bands = list("B4", "B3", "B2"), gamma = c(0.9, 1.1, 1)), name = "RGB")
+  Map$addLayer(s2_filt$median()$clip(tf), visParams = list(min = 0, max = 3000, bands = list("B4", "B3", "B2"), gamma = c(1, 1.1, 1)), name = "RGB")
+
+
+
+
 s2_spring_summer$yq
 
 e1 <- ee$Image(s2_quarterly$id[37])$select("B8", "B5", "B4", "B3", "B2")
@@ -117,7 +124,7 @@ em1 <- ic1()
 
 Map$addLayer(ic1$median()$clip(buffer))
 
-, visParams = list(min = 0, max = 65000, bands = c("B4", "B3", "B2")))
+, visParams = list(min = 0, max = 65000, bands = c("B5", "B4", "B3")))
 
 r <- map(c(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12), ee_as_raster, region = tf)
 
@@ -136,9 +143,46 @@ add_ndvi <- function(i){
 map(1:6, add_ndvi) |>
   brick()
 
-plot(rn, col =  c(
+col =  c(
   "#FFFFFF", "#CE7E45", "#DF923D", "#F1B555", "#FCD163", "#99B718", "#74A901",
   "#66A000", "#529400", "#3E8601", "#207401", "#056201", "#004C00", "#023B01",
   "#012E01", "#011D01", "#011301"
-))
+)
 
+ndvi_im <- function(img){
+  ndvi_values <- img$normalizedDifference(c("B8","B4"))
+}
+
+# Create a monthly composite
+
+start <- "2022-04-01"
+start1 <- "2019-04-01"
+end <- "2023-04-01"
+end1 <- "2020-04-01"
+
+ndvi_composite <- s2_filt$
+  filterDate(start, end )$
+  filter(ee$Filter$lt("CLOUDY_PIXEL_PERCENTAGE", 10))$
+  map(ndvi_im)$
+  median()
+
+ndvi_composite1 <- s2_filt$
+  filterDate(start1, end1 )$
+  filter(ee$Filter$lt("CLOUDY_PIXEL_PERCENTAGE", 10))$
+  map(ndvi_im)$
+  median()
+
+r1 <- rgee::ee_as_raster(image = ndvi_composite, region = tf, scale = 10)
+
+r2 <- rgee::ee_as_raster(image = ndvi_composite1, region = tf, scale = 10)
+
+(r1 - r2) |>
+  plot(col = RColorBrewer::brewer.pal("RdBu", n = 9))
+
+Map$centerObject(tf)
+Map$addLayer(ndvi_composite1$clip(tf),
+             visParams = list(min = -.5, max = 0.8, palette = RColorBrewer::brewer.pal("RdBu", n = 11))) |
+  Map$addLayer(ndvi_composite$clip(tf),
+               visParams = list(min = -.5, max = 0.8, palette = RColorBrewer::brewer.pal("RdBu", n = 11)))
+
+RColorBrewer::display.brewer.all()

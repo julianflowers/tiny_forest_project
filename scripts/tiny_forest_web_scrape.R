@@ -16,7 +16,8 @@ links <- get_page_links(url) %>%
 tf_df <- links |>
   mutate(url = paste0("https://tinyforest.earthwatch.org.uk/", value),
          stub = str_remove(value, "/tiny-forest-sites/8-tiny-forest/"),
-         tf_id = parse_number(stub))
+         tf_id = parse_number(stub)) |>
+  drop_na()
 
 
 tf_df |>
@@ -41,9 +42,10 @@ create_tf_table <- function(df, i){
 
 }
 
-tf_test <- map_dfr(183, ~(create_tf_table(tf_df, .x)))
+tf_df$url[1]
+tf_test <- map_dfr(20, ~(create_tf_table(tf_df, .x)))
 tf_test
-tf_table <- map_dfr(1:187, ~(create_tf_table(tf_df, .x)))
+tf_table <- map_dfr(1:177, ~(create_tf_table(tf_df, .x)))
 
 tf_table |>
   filter(tf_id == 372)
@@ -52,8 +54,8 @@ tf_table_planted <- tf_table |>
   group_by(tf_id) |>
   mutate(n = n(),
          id = row_number()) |>
-  filter(n > 3,
-         !tf_id %in% c(314, 371)) |>
+  #count(tf_id) |>
+  filter(n > 3) |>
   #DT::datatable(filter = "top")
   mutate(metric = case_when(id == 1 ~ "plant_date",
                             id == 2 ~ "area",
@@ -81,18 +83,23 @@ tf_table_tidy <- tf_table_planted |>
          area = parse_number(area),
          trees = str_remove(trees, "Species Planted in the Forest:"),
          gps = str_remove(gps, "GPS:")) |>
-  separate(gps, c("lat", 'lon'), sep = ",.") |>
-  mutate(trees = str_split(trees, "\\|"))
+  separate(gps, c("lat", 'lon'), sep = ",\\s?") |>
+  mutate(trees = str_split(trees, "\\|"),
+         lat = as.numeric(lat),
+         lon = as.numeric(lon))
+
+options(digits = 6)
+select(tf_table_tidy, lat, lon, tf_id) |>
+  print(n = 170)
 
 tf_presence_absence <- tf_table_tidy |>
   ungroup() |>
   unnest("trees") |>
   pivot_wider(names_from = "trees", values_from = "trees", values_fill = NA) |>
-  mutate_at(.vars = 7:84, ~(ifelse(is.na(.x), 0, 1))) |>
+  mutate_at(.vars = 7:83, ~(ifelse(is.na(.x), 0, 1))) |>
   select(-plant_date) |>
-  janitor::clean_names() |>
-  mutate(lat = as.numeric(lat),
-         lon = as.numeric(lon))
+  janitor::clean_names()
+
 
 tf_presence_absence |>
   write_csv("data/tf_trees.csv")

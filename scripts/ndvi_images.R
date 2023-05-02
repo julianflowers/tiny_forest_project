@@ -38,7 +38,7 @@ ee_utils_sak_validate()
 EE_geom <- ee$Geometry$Point(c(-1.215472, 51.769139))$buffer(2000)
 start <- "2019-01-01"
 end <- "2023-01-01"
-ccover <-
+ccover <- 10
 
 
 ## image collection filters
