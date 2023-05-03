@@ -1,0 +1,100 @@
+---
+title: "R for the terrified but curious"
+format: 
+    revealjs: 
+      incremental: true
+      scrollable: true
+      theme: moon
+editor: visual
+execute: 
+  cache: false
+---
+
+## R
+
+\- is a Statistical Programming Language
+
+-   Syntax
+-   Code
+-   Statistical analysis
+
+## R
+
+\- is a Data Science Toolkit
+
+-   Analysis
+-   Visualisation
+-   Data wrangling
+-   Data access
+-   Reproducibility
+-   Publication and sharing
+
+## A few examples
+
+Map the distribution of species x over time using NBN atlas data
+
+## Get the data from the NBN atlas API (aka webservice)
+
+```{r}
+library(needs)
+needs(tidyverse, jsonlite, sf, mapview, tictoc, ggspatial)
+
+
+search <- "https://records-ws.nbnatlas.org/occurrences/search?q=*:*&fq=genus:Falco&lat=51.5&lon=0.127&radius=300&pageSize=30000" # Set the base URL for the NBN Atlas web service.
+
+ 
+tic()
+df <- fromJSON(search, simplifyDataFrame = TRUE)
+toc() 
+
+
+```
+
+## Trend plot
+
+```{r}
+## plot trends
+
+df$occurrences |>
+  count(year, vernacularName) |>
+  filter(year > 1999) |>
+  ggplot() +
+  geom_col(aes(year, n)) +
+  facet_wrap(~vernacularName, scales = "free")
+
+
+```
+
+## Interactive map
+
+```{r}
+
+df$occurrences |>
+  filter(year > 1999) |>
+  sample_frac(.1) |>
+  st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326) |>
+  mapview(zcol = "vernacularName")
+```
+
+## Static maps
+
+```{r}
+
+df$occurrences |>
+  filter(year > 1999) |>
+  #olnames()
+  sample_frac(.5) |>
+  mutate(month = as.numeric(month), 
+         season = case_when(between(month, 4, 9) ~ "summer", 
+                            TRUE ~ "winter")) |>
+  select(season, vernacularName, year, contains("decimal")) |>
+  st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326) |>
+  ggplot() +
+  ggspatial::annotation_map_tile() +
+  geom_sf(aes(colour = season), size = 0.3) +
+  facet_wrap(~vernacularName, nrow = 2) +
+  theme_void()
+
+```
+
+

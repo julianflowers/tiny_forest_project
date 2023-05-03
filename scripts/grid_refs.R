@@ -38,7 +38,62 @@ get_grid_ref <- function(i){
 
 gr <- map(1:176, safely(get_grid_ref) ) |>
   map("result") |>
-  map_chr("gr")
+  map_chr("gr") |>
+  map(~(str_sub(.x, 1, 6)))
+
+
+
+tf <- flatten(gr) |>
+  map_chr(1) |>
+  bind_cols(tf)
+
+get_bsbi_data <- function(gr){
+
+  url <- paste0("https://database.bsbi.org/reports/sitetaxa.php?gridref=", gr, "&minfreq=1&minyear=2015&maxyear=2000&sortrecent=1")
+
+  records <- read_html(url) |>
+    html_nodes("section") |>
+    html_text2() |>
+    str_split("\\n") |>
+    enframe() |>
+    mutate(grid = gr) |>
+    unnest("grid") |>
+    unnest("value")
+
+  out <- list(records = records)
+
+}
+
+test <- get_bsbi_data(gr[1])
+
+plants <- map(gr, safely(get_bsbi_data))
+
+plants <- plants |>
+  map("result") |>
+  map("records") |>
+  list_rbind() |>
+  filter(str_length(value) > 1) |>
+  mutate(year = str_extract(value, "20\\d{2}"),
+         species_tot = ifelse(is.na(year), parse_number(value), NA)) |>
+  fill(species_tot, .direction = "up") |>
+  filter(!str_detect(value, "Total")) |>
+  slice(-169)
+
+plants |>
+  mutate(value = str_remove(value, "\\(20\\d{2}\\)"),
+         value = str_remove(value, "[[:space:]]s\\.s\\.|[[:space:]]s\\.l\\.|[[:space:]]agg\\.|× |[[:space:]]auct\\., non Mill\\.")) |>
+  separate_wider_delim(value, delim = " ", names = c("taxa1", "taxa2", "start", "end"), too_few = "align_start",
+                    too_many = "merge") |>
+  unite(taxa, c("taxa1", "taxa2")) |>
+  select(-name, -start, -species_tot) |>
+  pivot_wider(names_from = "taxa", values_from = "end", values_fn = \(x) sum(as.numeric(x), na.rm = TRUE), values_fill = 0) |>
+  left_join(tf, by = c("grid" = "...1")) |>
+  arrange(grid, year.x) |>
+  mutate(id = paste(tfid, year.x, grid, sep = "-")) |>
+  select(stub:id, everything()) |>
+  write_csv("data/plant_bsbi_matrix.csv")
+
+
 
 
 

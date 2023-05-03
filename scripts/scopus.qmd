@@ -1,0 +1,76 @@
+---
+title: "scopus searching"
+format: html
+editor: visual
+params:
+    query: "Urban AND agriculture AND biodiversity AND avian AND review"
+    n_abstracts: 100
+---
+
+## 
+
+Using the Scopus API to search and download abstracts in bulk and text analysis, ordination and clustering functions to sort and classify.
+
+First steps:
+
+-   Register with Elsevier for a Scopus API
+
+-   Get a API key
+
+```{r function_to_query}
+get_scopus_abstracts <- function(query = params$query, start = 0){
+
+query <- str_replace_all(query, "\\s", "%20")
+start <- start
+scop <- fromJSON(paste0("https://api.elsevier.com/content/search/scopus?query=", query, "&apiKey=8f82f98c6bca4cd26772e164d462a6ae&count=25&start=", start))
+
+doi_list <- pluck(scop$`search-results`$entry, "prism:doi")
+titles <- pluck(scop$`search-results`$entry, "dc:title")
+date <- pluck(scop$`search-results`$entry, "prism:coverDate")
+journal <- pluck(scop$`search-results`$entry, "prism:publicationName")
+
+
+get_scopus <- function(doi_list){
+
+  uri <- paste0("https://api.elsevier.com/content/article/doi/", doi, "?apiKey=8f82f98c6bca4cd26772e164d462a6ae&httpAccept=text%2Fxml")
+
+
+ rvest::read_html(uri) |>
+  rvest::html_text2() |>
+   enframe()
+
+}
+
+abstracts <- map(doi_list, safely(get_scopus)) |>
+  map_dfr("result") |>
+  bind_cols(doi = doi_list,
+            title = titles,
+            journal = journal,
+            date = date)
+
+
+return(abstracts)
+}
+
+```
+
+```{r}
+
+
+
+```
+
+```{r}
+
+reps <- seq(0, params$n_abstracts, by = 25)
+
+tictoc::tic()
+refs <- map_dfr(reps, ~(get_scopus_abstracts(start = .x)))
+tictoc::toc()
+
+
+```
+
+```{r}
+
+```

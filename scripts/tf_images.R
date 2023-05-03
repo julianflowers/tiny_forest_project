@@ -1,5 +1,6 @@
 ## get satellite images from google maps
 needs(magick, gt, gtExtras)
+
 save_ggmap_images<- function(i){
 
 Sys.setenv(GGMAP_GOOGLE_API_KEY= "AIzaSyBhAWbDyKX2chM2Jz0ZV22uT_8qN7YKL3Q")
@@ -8,7 +9,8 @@ needs(ggmap, tidyverse, sf, here, lubridate, vegan, data.table, mapview)
 
 tf_w <- fread("data/tf_trees.csv") |>
   mutate(year = year(date),
-         year_month = zoo::as.yearmon(date))
+         year_month = zoo::as.yearmon(date)) |>
+  as_tibble()
 
 tf_1 <- tf_w |>
   st_as_sf(coords = c("lon", "lat"), crs = 4326)
@@ -76,7 +78,7 @@ image_table <- sat_files |>
 
 image_table_1 <- sat_files |>
   mutate(img1 = str_extract(value, "tf_.*png"),
-         id = parse_number(img1)
+         id = parse_number(img1),
          value1 = value) |>
   arrange(id)
 

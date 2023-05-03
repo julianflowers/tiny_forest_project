@@ -19,6 +19,8 @@ osgrid <- import("OSGridConverter")
 tf <- read_csv("data/tf_trees.csv")
 tf
 
+
+
 grid <- osgrid$latlong2grid(tf$lat[160],tf$lon[160])
 
 r <- str(grid)
